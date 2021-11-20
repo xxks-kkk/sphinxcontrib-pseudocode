@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-    sphinx-mermaid
-    ~~~~~~~~~~~~~~~
+    sphinx-algo
+    ~~~~~~~~~~~
 
-    Allow mermaid diagramas to be included in Sphinx-generated
-    documents inline.
+    Allow typeset algorithms in latex powered by pseudocode.js inside sphinx-doc
 
-    :copyright: Copyright 2016-2021 by Martín Gaitán and others, see AUTHORS.
+    :copyright: Copyright 2016-2021 by Zeyuan Hu, Martín Gaitán, and others, see AUTHORS.
     :license: BSD, see LICENSE for details.
 """
 
