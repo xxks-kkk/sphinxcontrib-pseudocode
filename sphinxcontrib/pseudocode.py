@@ -91,9 +91,9 @@ class Pseudocode(Directive):
 
 def _render_mm_html_raw(self, node, code, options, prefix='mermaid',
                         imgcls=None, alt=None):
-    tag_template = """<div id="{id}" class="pcode" style="display:hidden;">
+    tag_template = """<pre id="{id}" style="display:hidden;">
             {code}
-        </div>"""
+        </pre>"""
 
     self.body.append(tag_template.format(id=node.get('id'), code=self.encode(code)))
     raise nodes.SkipNode
