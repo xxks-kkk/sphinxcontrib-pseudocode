@@ -9,30 +9,34 @@
     :license: BSD, see LICENSE for details.
 """
 
-import re
 import codecs
-import posixpath
 import os
-from subprocess import Popen, PIPE
+import posixpath
+import re
+import shutil
 from hashlib import sha1
+from subprocess import Popen, PIPE
 from tempfile import _get_default_tempdir
+from tempfile import mkdtemp
+from textwrap import dedent
+
+import sphinx
 from docutils import nodes
 from docutils.parsers.rst import Directive, directives
 from docutils.statemachine import ViewList
-
-import sphinx
-from sphinx.locale import _
+from sphinx.util import logging
 from sphinx.util.i18n import search_image_for_language
 from sphinx.util.osutil import ensuredir
-from sphinx.util import logging
+import uuid
+
 from .exceptions import MermaidError
-from .autoclassdiag import class_diagram
 
 logger = logging.getLogger(__name__)
 
 mapname_re = re.compile(r'<map id="(.*?)"')
 
-
+filename_autorenderer = 'katex_autorenderer.js'
+MAXJAX_URL = 'https://cdn.jsdelivr.net/npm/mathjax@3.0.0/es5/tex-chtml.js'
 
 class mermaid(nodes.General, nodes.Inline, nodes.Element):
     pass
@@ -64,40 +68,17 @@ class Mermaid(Directive):
     """
     has_content = True
     required_arguments = 0
-    optional_arguments = 1
+    optional_arguments = 0
     final_argument_whitespace = False
-    option_spec = {
-        'alt': directives.unchanged,
-        'align': align_spec,
-        'caption': directives.unchanged,
-    }
+    option_spec = {}
 
     def get_mm_code(self):
-        if self.arguments:
-            # try to load mermaid code from an external file
-            document = self.state.document
-            if self.content:
-                return [document.reporter.warning(
-                    'Mermaid directive cannot have both content and '
-                    'a filename argument', line=self.lineno)]
-            env = self.state.document.settings.env
-            argument = search_image_for_language(self.arguments[0], env)
-            rel_filename, filename = env.relfn2path(argument)
-            env.note_dependency(rel_filename)
-            try:
-                with codecs.open(filename, 'r', 'utf-8') as fp:
-                    mmcode = fp.read()
-            except (IOError, OSError):
-                return [document.reporter.warning(
-                    'External Mermaid file %r not found or reading '
-                    'it failed' % filename, line=self.lineno)]
-        else:
-            # inline mermaid code
-            mmcode = '\n'.join(self.content)
-            if not mmcode.strip():
-                return [self.state_machine.reporter.warning(
-                    'Ignoring "mermaid" directive without content.',
-                    line=self.lineno)]
+        # inline mermaid code
+        mmcode = '\n'.join(self.content)
+        if not mmcode.strip():
+            return [self.state_machine.reporter.warning(
+                'Ignoring "mermaid" directive without content.',
+                line=self.lineno)]
         return mmcode
 
     def run(self):
@@ -119,262 +100,96 @@ class Mermaid(Directive):
         return [node]
 
 
-class MermaidClassDiagram(Mermaid):
-
-    has_content = False
-    required_arguments = 1
-    optional_arguments = 100
-    option_spec = Mermaid.option_spec.copy()
-    option_spec.update({
-        "full": directives.flag,
-        "namespace": directives.unchanged,
-        "strict": directives.flag,
-    })
-
-    def get_mm_code(self):
-        return class_diagram(
-            *self.arguments,
-            full="full" in self.options,
-            strict="strict" in self.options,
-            namespace=self.options.get("namespace")
-        )
-
-
-def render_mm(self, code, options, _fmt, prefix='mermaid'):
-    """Render mermaid code into a PNG or PDF output file."""
-
-    if _fmt == 'raw':
-        _fmt = 'png'
-
-    mermaid_cmd = self.builder.config.mermaid_cmd
-    mermaid_cmd_shell = self.builder.config.mermaid_cmd_shell in {True, 'True', 'true'}
-    hashkey = (code + str(options) + str(self.builder.config.mermaid_sequence_config)).encode('utf-8')
-
-    basename = '%s-%s' % (prefix, sha1(hashkey).hexdigest())
-    fname = '%s.%s' % (basename, _fmt)
-    relfn = posixpath.join(self.builder.imgpath, fname)
-    outdir = os.path.join(self.builder.outdir, self.builder.imagedir)
-    outfn = os.path.join(outdir, fname)
-    tmpfn = os.path.join(_get_default_tempdir(), basename)
-
-    if os.path.isfile(outfn):
-        return relfn, outfn
-
-    ensuredir(os.path.dirname(outfn))
-
-    with open(tmpfn, 'w') as t:
-        t.write(code)
-
-    mm_args = [mermaid_cmd, '-i', tmpfn, '-o', outfn]
-    mm_args.extend(self.builder.config.mermaid_params)
-    if self.builder.config.mermaid_sequence_config:
-       mm_args.extend('--configFile', self.builder.config.mermaid_sequence_config)
-
-    try:
-        p = Popen(mm_args, shell=mermaid_cmd_shell, stdout=PIPE, stdin=PIPE, stderr=PIPE)
-    except FileNotFoundError:
-        logger.warning('command %r cannot be run (needed for mermaid '
-                       'output), check the mermaid_cmd setting' % mermaid_cmd)
-        return None, None
-
-    stdout, stderr = p.communicate(str.encode(code))
-    if self.builder.config.mermaid_verbose:
-        logger.info(stdout)
-
-    if p.returncode != 0:
-        raise MermaidError('Mermaid exited with error:\n[stderr]\n%s\n'
-                            '[stdout]\n%s' % (stderr, stdout))
-    if not os.path.isfile(outfn):
-        raise MermaidError('Mermaid did not produce an output file:\n[stderr]\n%s\n'
-                            '[stdout]\n%s' % (stderr, stdout))
-    return relfn, outfn
-
-
 def _render_mm_html_raw(self, node, code, options, prefix='mermaid',
-                   imgcls=None, alt=None):
-    if 'align' in node:
-        tag_template = """<div align="{align}" class="mermaid align-{align}">
+                        imgcls=None, alt=None):
+    tag_template = """<pre id="quicksort" style="display:hidden;">
             {code}
-        </div>
-        """
-    else:
-        tag_template = """<div class="mermaid">
-            {code}
-        </div>"""
+        </pre>"""
 
-    self.body.append(tag_template.format(align=node.get('align'), code=self.encode(code)))
+    self.body.append(tag_template.format(code=self.encode(code)))
     raise nodes.SkipNode
 
 
 def render_mm_html(self, node, code, options, prefix='mermaid',
                    imgcls=None, alt=None):
-
     _fmt = self.builder.config.mermaid_output_format
     if _fmt == 'raw':
         return _render_mm_html_raw(self, node, code, options, prefix='mermaid',
-                   imgcls=None, alt=None)
-
-    try:
-        if _fmt not in ('png', 'svg'):
-            raise MermaidError("mermaid_output_format must be one of 'raw', 'png', "
-                                "'svg', but is %r" % _fmt)
-
-        fname, outfn = render_mm(self, code, options, _fmt, prefix)
-    except MermaidError as exc:
-        logger.warning('mermaid code %r: ' % code + str(exc))
-        raise nodes.SkipNode
-
-    if fname is None:
-        self.body.append(self.encode(code))
-    else:
-        if alt is None:
-            alt = node.get('alt', self.encode(code).strip())
-        imgcss = imgcls and 'class="%s"' % imgcls or ''
-        if _fmt == 'svg':
-            svgtag = '''<object data="%s" type="image/svg+xml">
-            <p class="warning">%s</p></object>\n''' % (fname, alt)
-            self.body.append(svgtag)
-        else:
-            if 'align' in node:
-                self.body.append('<div align="%s" class="align-%s">' %
-                                 (node['align'], node['align']))
-
-            self.body.append('<img src="%s" alt="%s" %s/>\n' %
-                             (fname, alt, imgcss))
-            if 'align' in node:
-                self.body.append('</div>\n')
-
-    raise nodes.SkipNode
+                                   imgcls=None, alt=None)
 
 
 def html_visit_mermaid(self, node):
     render_mm_html(self, node, node['code'], node['options'])
 
+def write_katex_autorenderer_file(app, filename):
+    filename = os.path.join(
+        app.builder.srcdir, app._katex_static_path, filename
+    )
+    content = katex_autorenderer_content(app)
+    with open(filename, 'w') as file:
+        file.write(content)
 
-def render_mm_latex(self, node, code, options, prefix='mermaid'):
-    try:
-        fname, outfn = render_mm(self, code, options, 'pdf', prefix)
-    except MermaidError as exc:
-        logger.warning('mm code %r: ' % code + str(exc))
-        raise nodes.SkipNode
+def katex_autorenderer_content(app):
+    content = dedent('''\
+            document.addEventListener("DOMContentLoaded", function() {
+              pseudocode.renderElement(document.getElementById("quicksort"));
+            });
+            ''')
+    prefix = ''
+    suffix = ''
+    options = ''
+    delimiters = ''
+    return '\n'.join([prefix, options, delimiters, suffix, content])
 
-    if self.builder.config.mermaid_pdfcrop != '':
-        mm_args = [self.builder.config.mermaid_pdfcrop, outfn]
-        try:
-            p = Popen(mm_args, stdout=PIPE, stdin=PIPE, stderr=PIPE)
-        except OSError as err:
-            if err.errno != ENOENT:   # No such file or directory
-                raise
-            logger.warning('command %r cannot be run (needed to crop pdf), check the mermaid_cmd setting' % self.builder.config.mermaid_pdfcrop)
-            return None, None
-
-        stdout, stderr = p.communicate()
-        if self.builder.config.mermaid_verbose:
-            logger.info(stdout)
-
-        if p.returncode != 0:
-            raise MermaidError('PdfCrop exited with error:\n[stderr]\n%s\n'
-                                '[stdout]\n%s' % (stderr, stdout))
-        if not os.path.isfile(outfn):
-            raise MermaidError('PdfCrop did not produce an output file:\n[stderr]\n%s\n'
-                                '[stdout]\n%s' % (stderr, stdout))
-
-        fname = '{filename[0]}-crop{filename[1]}'.format(filename=os.path.splitext(fname))
-
-    is_inline = self.is_inline(node)
-    if is_inline:
-        para_separator = ''
-    else:
-        para_separator = '\n'
-
-    if fname is not None:
-        post = None
-        if not is_inline and 'align' in node:
-            if node['align'] == 'left':
-                self.body.append('{')
-                post = '\\hspace*{\\fill}}'
-            elif node['align'] == 'right':
-                self.body.append('{\\hspace*{\\fill}')
-                post = '}'
-        self.body.append('%s\\sphinxincludegraphics{%s}%s' %
-                         (para_separator, fname, para_separator))
-        if post:
-            self.body.append(post)
-
-    raise nodes.SkipNode
-
-
-def latex_visit_mermaid(self, node):
-    render_mm_latex(self, node, node['code'], node['options'])
-
-
-def render_mm_texinfo(self, node, code, options, prefix='mermaid'):
-    try:
-        fname, outfn = render_mm(self, code, options, 'png', prefix)
-    except MermaidError as exc:
-        logger.warning('mm code %r: ' % code + str(exc))
-        raise nodes.SkipNode
-    if fname is not None:
-        self.body.append('@image{%s,,,[mermaid],png}\n' % fname[:-4])
-    raise nodes.SkipNode
-
-
-def texinfo_visit_mermaid(self, node):
-    render_mm_texinfo(self, node, node['code'], node['options'])
-
-
-def text_visit_mermaid(self, node):
-    if 'alt' in node.attributes:
-        self.add_text(_('[graph: %s]') % node['alt'])
-    else:
-        self.add_text(_('[graph]'))
-    raise nodes.SkipNode
-
-
-def man_visit_mermaid(self, node):
-    if 'alt' in node.attributes:
-        self.body.append(_('[graph: %s]') % node['alt'])
-    else:
-        self.body.append(_('[graph]'))
-    raise nodes.SkipNode
-
+def builder_inited(app):
+    setup_static_path(app)
+    install_js(app)
 
 def install_js(app, *args):
     # add required javascript
-    if not app.config.mermaid_version:
-        _mermaid_js_url = None     # asummed is local
-    elif app.config.mermaid_version == "latest":
-        _mermaid_js_url = f"https://unpkg.com/mermaid/dist/mermaid.min.js"
-    else:
-        _mermaid_js_url = f"https://unpkg.com/mermaid@{app.config.mermaid_version}/dist/mermaid.min.js"
+    if app.config.mermaid_version == "latest":
+        _mermaid_js_url = f"https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.js"
     if _mermaid_js_url:
         app.add_js_file(_mermaid_js_url)
+    old_css_add = getattr(app, 'add_stylesheet', None)
+    add_css = getattr(app, 'add_css_file', old_css_add)
+    add_css(f"https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.min.css")
+    # app.add_js_file(f"https://cdn.jsdelivr.net/npm/mathjax@3.0.0/es5/tex-chtml.js")
+    # https://github.com/hagenw/sphinxcontrib-katex/blob/ce89a95b3b330a19ad4562b87aacc69ddb6742f2/sphinxcontrib/katex.py#L185
+    # https://stackoverflow.com/questions/38860740/alternative-for-executing-script-at-end-of-document-body
+    write_katex_autorenderer_file(app, filename_autorenderer)
+    app.add_js_file(filename_autorenderer)
+    # options = {"tex": {"inlineMath": "[['$','$'], ['\\(','\\)']]", "displayMath": "[['$$','$$'], ['\\[','\\]']]", "processEscapes": "true", "processEnvironments": "true"}}
+    # app.add_js_file(MAXJAX_URL, **options)
+    # app.add_js_file(None, body='''    MathJax = {
+    #     tex: {
+    #         inlineMath: [['$','$'], ['\\(','\\)']],
+    #         displayMath: [['$$','$$'], ['\\[','\\]']],
+    #         processEscapes: true,
+    #         processEnvironments: true,
+    #     }
+    # }''')
+    # app.add_js_file(MAXJAX_URL)
+    app.add_js_file(f"https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.js")
 
-    if app.config.mermaid_init_js:
-        # If mermaid is local the init-call must be placed after `html_js_files` which has a priority of 800.
-        priority = 500 if _mermaid_js_url is not None else 801
-        app.add_js_file(None, body=app.config.mermaid_init_js, priority=priority)
+def setup_static_path(app):
+    app._katex_static_path = mkdtemp()
+    if app._katex_static_path not in app.config.html_static_path:
+        app.config.html_static_path.append(app._katex_static_path)
 
+
+def builder_finished(app, exception):
+    # Delete temporary dir used for _static file
+    shutil.rmtree(app._katex_static_path)
 
 def setup(app):
     app.add_node(mermaid,
-                 html=(html_visit_mermaid, None),
-                 latex=(latex_visit_mermaid, None),
-                 texinfo=(texinfo_visit_mermaid, None),
-                 text=(text_visit_mermaid, None),
-                 man=(man_visit_mermaid, None))
+                 html=(html_visit_mermaid, None))
     app.add_directive('mermaid', Mermaid)
-    app.add_directive('autoclasstree', MermaidClassDiagram)
-
-    app.add_config_value('mermaid_cmd', 'mmdc', 'html')
-    app.add_config_value('mermaid_cmd_shell', 'False', 'html')
-    app.add_config_value('mermaid_pdfcrop', '', 'html')
-    app.add_config_value('mermaid_output_format', 'raw', 'html')
-    app.add_config_value('mermaid_params', list(), 'html')
-    app.add_config_value('mermaid_verbose', False, 'html')
-    app.add_config_value('mermaid_sequence_config', False, 'html')
     app.add_config_value('mermaid_version', 'latest', 'html')
-    app.add_config_value('mermaid_init_js', "mermaid.initialize({startOnLoad:true});", 'html')
-    app.connect('html-page-context', install_js)
+    app.add_config_value('mermaid_output_format', 'raw', 'html')
+    app.connect('builder-inited', builder_inited)
+    app.connect('build-finished', builder_finished)
+    # app.connect('html-page-context', install_js)
 
     return {'version': sphinx.__display_version__, 'parallel_read_safe': True}
