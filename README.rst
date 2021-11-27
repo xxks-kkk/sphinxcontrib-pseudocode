@@ -1,11 +1,9 @@
-..
-    .. mermaid::
 
-        \begin{algorithmic}
-        \PRINT \texttt{'hello world'}
-        \end{algorithmic}
+.. pcode::
 
-
+    \begin{algorithmic}
+    \PRINT \texttt{'hello world'}
+    \end{algorithmic}
 
 .. pcode::
 

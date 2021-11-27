@@ -12,6 +12,7 @@
 import os
 import re
 import shutil
+import uuid
 from tempfile import mkdtemp
 from textwrap import dedent
 
@@ -27,8 +28,10 @@ mapname_re = re.compile(r'<map id="(.*?)"')
 
 filename_autorenderer = 'katex_autorenderer.js'
 
+
 class pseudocode(nodes.General, nodes.Inline, nodes.Element):
     pass
+
 
 def figure_wrapper(directive, node, caption):
     figure_node = nodes.figure('', node)
@@ -70,6 +73,7 @@ class Pseudocode(Directive):
 
         node = pseudocode()
         node['code'] = self.get_mm_code()
+        node['id'] = uuid.uuid4()
         node['options'] = {}
         if 'alt' in self.options:
             node['alt'] = self.options['alt']
@@ -87,11 +91,11 @@ class Pseudocode(Directive):
 
 def _render_mm_html_raw(self, node, code, options, prefix='mermaid',
                         imgcls=None, alt=None):
-    tag_template = """<pre id="quicksort" style="display:hidden;">
+    tag_template = """<div id="{id}" class="pcode" style="display:hidden;">
             {code}
-        </pre>"""
+        </div>"""
 
-    self.body.append(tag_template.format(code=self.encode(code)))
+    self.body.append(tag_template.format(id=node.get('id'), code=self.encode(code)))
     raise nodes.SkipNode
 
 
@@ -106,29 +110,36 @@ def render_mm_html(self, node, code, options, prefix='mermaid',
 def html_visit_pseudocode(self, node):
     render_mm_html(self, node, node['code'], node['options'])
 
-def write_katex_autorenderer_file(app, filename):
+
+def write_katex_autorenderer_file(app, filename, ids):
     filename = os.path.join(
         app.builder.srcdir, app._katex_static_path, filename
     )
-    content = katex_autorenderer_content(app)
+    content = katex_autorenderer_content(app, ids)
     with open(filename, 'w') as file:
         file.write(content)
 
-def katex_autorenderer_content(app):
+
+def katex_autorenderer_content(app, ids):
     content = dedent('''\
-            document.addEventListener("DOMContentLoaded", function() {
-              pseudocode.renderElement(document.getElementById("quicksort"));
-            });
-            ''')
+            document.addEventListener("DOMContentLoaded", function() {{
+              {functions}
+            }});''')
+    functions = ''
+    for id in ids:
+        functions += '''pseudocode.renderElement(document.getElementById("{id}"));\n'''.format(id=id)
+    content = content.format(functions=functions)
     prefix = ''
     suffix = ''
     options = ''
     delimiters = ''
     return '\n'.join([prefix, options, delimiters, suffix, content])
 
+
 def builder_inited(app):
     setup_static_path(app)
     install_js(app)
+
 
 def install_js(app, *args):
     # add required javascript
@@ -139,23 +150,26 @@ def install_js(app, *args):
     old_css_add = getattr(app, 'add_stylesheet', None)
     add_css = getattr(app, 'add_css_file', old_css_add)
     add_css(f"https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.min.css")
-    # app.add_js_file(f"https://cdn.jsdelivr.net/npm/mathjax@3.0.0/es5/tex-chtml.js")
-    # https://github.com/hagenw/sphinxcontrib-katex/blob/ce89a95b3b330a19ad4562b87aacc69ddb6742f2/sphinxcontrib/katex.py#L185
-    # https://stackoverflow.com/questions/38860740/alternative-for-executing-script-at-end-of-document-body
-    write_katex_autorenderer_file(app, filename_autorenderer)
-    app.add_js_file(filename_autorenderer)
-    # options = {"tex": {"inlineMath": "[['$','$'], ['\\(','\\)']]", "displayMath": "[['$$','$$'], ['\\[','\\]']]", "processEscapes": "true", "processEnvironments": "true"}}
-    # app.add_js_file(MAXJAX_URL, **options)
-    # app.add_js_file(None, body='''    MathJax = {
-    #     tex: {
-    #         inlineMath: [['$','$'], ['\\(','\\)']],
-    #         displayMath: [['$$','$$'], ['\\[','\\]']],
-    #         processEscapes: true,
-    #         processEnvironments: true,
-    #     }
-    # }''')
-    # app.add_js_file(MAXJAX_URL)
     app.add_js_file(f"https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.js")
+
+
+def install_js2(app, doctree, fromdocname):
+    """
+    Generate katex_autorenderer.js based on ids of each pcode so that
+    we can create associate document.getElementById functions
+    """
+    ids = []
+    for node in doctree.traverse(pseudocode):
+        ids.append(node['id'])
+    write_katex_autorenderer_file(app, filename_autorenderer, ids)
+
+
+def install_js2_part2(app, pagename, templatename, context, doctree):
+    """
+    Register katex_autorenderer.js
+    """
+    app.add_js_file(filename_autorenderer)
+
 
 def setup_static_path(app):
     app._katex_static_path = mkdtemp()
@@ -167,6 +181,7 @@ def builder_finished(app, exception):
     # Delete temporary dir used for _static file
     shutil.rmtree(app._katex_static_path)
 
+
 def setup(app):
     app.add_node(pseudocode,
                  html=(html_visit_pseudocode, None))
@@ -174,7 +189,8 @@ def setup(app):
     app.add_config_value('pseudocode_version', 'latest', 'html')
     app.add_config_value('pseudocode_output_format', 'raw', 'html')
     app.connect('builder-inited', builder_inited)
+    app.connect('doctree-resolved', install_js2)
+    app.connect('html-page-context', install_js2_part2)
     app.connect('build-finished', builder_finished)
-    # app.connect('html-page-context', install_js)
 
     return {'version': sphinx.__display_version__, 'parallel_read_safe': True}
