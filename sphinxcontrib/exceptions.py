@@ -1,5 +1,5 @@
 from sphinx.errors import SphinxError
 
 
-class MermaidError(SphinxError):
-    category = 'Mermaid error'
+class PseudocodeError(SphinxError):
+    category = 'Pseudocode error'
