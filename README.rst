@@ -7,7 +7,7 @@
 
 
 
-.. mermaid::
+.. pcode::
 
     % This quicksort algorithm is extracted from Chapter 7, Introduction to Algorithms (3rd edition)
     \begin{algorithm}

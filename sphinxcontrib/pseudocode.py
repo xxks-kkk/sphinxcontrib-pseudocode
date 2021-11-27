@@ -9,14 +9,9 @@
     :license: BSD, see LICENSE for details.
 """
 
-import codecs
 import os
-import posixpath
 import re
 import shutil
-from hashlib import sha1
-from subprocess import Popen, PIPE
-from tempfile import _get_default_tempdir
 from tempfile import mkdtemp
 from textwrap import dedent
 
@@ -25,22 +20,15 @@ from docutils import nodes
 from docutils.parsers.rst import Directive, directives
 from docutils.statemachine import ViewList
 from sphinx.util import logging
-from sphinx.util.i18n import search_image_for_language
-from sphinx.util.osutil import ensuredir
-import uuid
-
-from .exceptions import MermaidError
 
 logger = logging.getLogger(__name__)
 
 mapname_re = re.compile(r'<map id="(.*?)"')
 
 filename_autorenderer = 'katex_autorenderer.js'
-MAXJAX_URL = 'https://cdn.jsdelivr.net/npm/mathjax@3.0.0/es5/tex-chtml.js'
 
-class mermaid(nodes.General, nodes.Inline, nodes.Element):
+class pseudocode(nodes.General, nodes.Inline, nodes.Element):
     pass
-
 
 def figure_wrapper(directive, node, caption):
     figure_node = nodes.figure('', node)
@@ -62,10 +50,7 @@ def align_spec(argument):
     return directives.choice(argument, ('left', 'center', 'right'))
 
 
-class Mermaid(Directive):
-    """
-    Directive to insert arbitrary Mermaid markup.
-    """
+class Pseudocode(Directive):
     has_content = True
     required_arguments = 0
     optional_arguments = 0
@@ -83,7 +68,7 @@ class Mermaid(Directive):
 
     def run(self):
 
-        node = mermaid()
+        node = pseudocode()
         node['code'] = self.get_mm_code()
         node['options'] = {}
         if 'alt' in self.options:
@@ -112,13 +97,13 @@ def _render_mm_html_raw(self, node, code, options, prefix='mermaid',
 
 def render_mm_html(self, node, code, options, prefix='mermaid',
                    imgcls=None, alt=None):
-    _fmt = self.builder.config.mermaid_output_format
+    _fmt = self.builder.config.pseudocode_output_format
     if _fmt == 'raw':
-        return _render_mm_html_raw(self, node, code, options, prefix='mermaid',
+        return _render_mm_html_raw(self, node, code, options, prefix='pseudocode',
                                    imgcls=None, alt=None)
 
 
-def html_visit_mermaid(self, node):
+def html_visit_pseudocode(self, node):
     render_mm_html(self, node, node['code'], node['options'])
 
 def write_katex_autorenderer_file(app, filename):
@@ -147,10 +132,10 @@ def builder_inited(app):
 
 def install_js(app, *args):
     # add required javascript
-    if app.config.mermaid_version == "latest":
-        _mermaid_js_url = f"https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.js"
-    if _mermaid_js_url:
-        app.add_js_file(_mermaid_js_url)
+    if app.config.pseudocode_version == "latest":
+        _pseudocode_js_url = f"https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.js"
+    if _pseudocode_js_url:
+        app.add_js_file(_pseudocode_js_url)
     old_css_add = getattr(app, 'add_stylesheet', None)
     add_css = getattr(app, 'add_css_file', old_css_add)
     add_css(f"https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.min.css")
@@ -183,11 +168,11 @@ def builder_finished(app, exception):
     shutil.rmtree(app._katex_static_path)
 
 def setup(app):
-    app.add_node(mermaid,
-                 html=(html_visit_mermaid, None))
-    app.add_directive('mermaid', Mermaid)
-    app.add_config_value('mermaid_version', 'latest', 'html')
-    app.add_config_value('mermaid_output_format', 'raw', 'html')
+    app.add_node(pseudocode,
+                 html=(html_visit_pseudocode, None))
+    app.add_directive('pcode', Pseudocode)
+    app.add_config_value('pseudocode_version', 'latest', 'html')
+    app.add_config_value('pseudocode_output_format', 'raw', 'html')
     app.connect('builder-inited', builder_inited)
     app.connect('build-finished', builder_finished)
     # app.connect('html-page-context', install_js)

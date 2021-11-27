@@ -1,5 +1,5 @@
-| sphinxcontrib-mermaid is a Sphinx extension for Mermaid Diagrams
-| Copyright (c) 2016 by Martín Gaitán
+| sphinxcontrib-pseudocode is a Sphinx extension for pseudocode.js
+| Copyright (c) 2021 by Zeyuan Hu
 | All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
