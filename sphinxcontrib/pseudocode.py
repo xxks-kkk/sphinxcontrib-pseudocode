@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    sphinx-algo
-    ~~~~~~~~~~~
+    sphinx-pseudocode
+    ~~~~~~~~~~~~~~~~~
 
     Allow typeset algorithms in latex powered by pseudocode.js inside sphinx-doc
 
@@ -33,22 +33,6 @@ class pseudocode(nodes.General, nodes.Inline, nodes.Element):
     pass
 
 
-def figure_wrapper(directive, node, caption):
-    figure_node = nodes.figure('', node)
-    if 'align' in node:
-        figure_node['align'] = node.attributes.pop('align')
-
-    parsed = nodes.Element()
-    directive.state.nested_parse(ViewList([caption], source=''),
-                                 directive.content_offset, parsed)
-    caption_node = nodes.caption(parsed[0].rawsource, '',
-                                 *parsed[0].children)
-    caption_node.source = parsed[0].source
-    caption_node.line = parsed[0].line
-    figure_node += caption_node
-    return figure_node
-
-
 def align_spec(argument):
     return directives.choice(argument, ('left', 'center', 'right'))
 
@@ -58,16 +42,18 @@ class Pseudocode(Directive):
     required_arguments = 0
     optional_arguments = 0
     final_argument_whitespace = False
-    option_spec = {}
+    option_spec = {
+        'linenos': directives.unchanged
+    }
 
     def get_mm_code(self):
-        # inline mermaid code
-        mmcode = '\n'.join(self.content)
-        if not mmcode.strip():
+        # inline pseudocode code
+        pcode = '\n'.join(self.content)
+        if not pcode.strip():
             return [self.state_machine.reporter.warning(
-                'Ignoring "mermaid" directive without content.',
+                'Ignoring "pcode" directive without content.',
                 line=self.lineno)]
-        return mmcode
+        return pcode
 
     def run(self):
 
@@ -75,21 +61,13 @@ class Pseudocode(Directive):
         node['code'] = self.get_mm_code()
         node['id'] = uuid.uuid4()
         node['options'] = {}
-        if 'alt' in self.options:
-            node['alt'] = self.options['alt']
-        if 'align' in self.options:
-            node['align'] = self.options['align']
-        if 'inline' in self.options:
-            node['inline'] = True
-
-        caption = self.options.get('caption')
-        if caption:
-            node = figure_wrapper(self, node, caption)
+        if 'linenos' in self.options:
+            node['linenos'] = True
 
         return [node]
 
 
-def _render_mm_html_raw(self, node, code, options, prefix='mermaid',
+def _render_mm_html_raw(self, node, code, options, prefix='pseudocode',
                         imgcls=None, alt=None):
     tag_template = """<pre id="{id}" style="display:hidden;">
             {code}
@@ -99,7 +77,7 @@ def _render_mm_html_raw(self, node, code, options, prefix='mermaid',
     raise nodes.SkipNode
 
 
-def render_mm_html(self, node, code, options, prefix='mermaid',
+def render_mm_html(self, node, code, options, prefix='pseudocode',
                    imgcls=None, alt=None):
     _fmt = self.builder.config.pseudocode_output_format
     if _fmt == 'raw':
@@ -111,23 +89,26 @@ def html_visit_pseudocode(self, node):
     render_mm_html(self, node, node['code'], node['options'])
 
 
-def write_katex_autorenderer_file(app, filename, ids):
+def write_katex_autorenderer_file(app, filename, dicts):
     filename = os.path.join(
         app.builder.srcdir, app._katex_static_path, filename
     )
-    content = katex_autorenderer_content(app, ids)
+    content = katex_autorenderer_content(app, dicts)
     with open(filename, 'w') as file:
         file.write(content)
 
 
-def katex_autorenderer_content(app, ids):
+def katex_autorenderer_content(app, dicts):
     content = dedent('''\
             document.addEventListener("DOMContentLoaded", function() {{
               {functions}
             }});''')
     functions = ''
-    for id in ids:
-        functions += '''pseudocode.renderElement(document.getElementById("{id}"));\n'''.format(id=id)
+    for pairs in dicts:
+        functions += '''pseudocode.renderElement(document.getElementById("{id}"));\n'''.format(id=pairs['id']) if \
+            pairs['linenos'] == False \
+            else '''pseudocode.renderElement(document.getElementById("{id}"), {{lineNumber: true}});\n'''.format(
+            id=pairs['id'])
     content = content.format(functions=functions)
     prefix = ''
     suffix = ''
@@ -155,13 +136,14 @@ def install_js(app, *args):
 
 def install_js2(app, doctree, fromdocname):
     """
-    Generate katex_autorenderer.js based on ids of each pcode so that
+    Generate katex_autorenderer.js based on ids of each pcode and associated options so that
     we can create associate document.getElementById functions
     """
-    ids = []
+    dicts = []
     for node in doctree.traverse(pseudocode):
-        ids.append(node['id'])
-    write_katex_autorenderer_file(app, filename_autorenderer, ids)
+        pairs = {'id': node['id'], 'linenos': True if 'linenos' in node else False}
+        dicts.append(pairs)
+    write_katex_autorenderer_file(app, filename_autorenderer, dicts)
 
 
 def install_js2_part2(app, pagename, templatename, context, doctree):

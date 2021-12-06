@@ -1,11 +1,13 @@
 
 .. pcode::
+   :linenos:
 
     \begin{algorithmic}
     \PRINT \texttt{'hello world'}
     \end{algorithmic}
 
 .. pcode::
+   :linenos:
 
     % This quicksort algorithm is extracted from Chapter 7, Introduction to Algorithms (3rd edition)
     \begin{algorithm}
