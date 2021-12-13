@@ -1,0 +1,29 @@
+name: build-sphinx-to-gh-pages
+
+env:
+  GITHUB_ACTOR: xxks-kkk
+  GITHUB_REPOSITORY: xxks-kkk/sphinxcontrib-pseudocode
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build_sphinx_job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run build script for Sphinx pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd docs
+          chmod +x buildsite.sh
+          ls
+          ./buildsite.sh
+        shell: bash

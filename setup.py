@@ -3,8 +3,7 @@
 import io
 from setuptools import setup, find_packages
 
-readme = io.open('README.rst', encoding="utf-8").read()
-changes = io.open('CHANGELOG.rst', encoding="utf-8").read()
+readme = io.open('README.md', encoding="utf-8").read()
 version = '0.0.1'
 
 setup(
