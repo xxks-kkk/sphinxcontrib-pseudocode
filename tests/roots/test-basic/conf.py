@@ -1,2 +1,2 @@
-extensions = ['sphinxcontrib.mermaid']
+extensions = ['sphinxcontrib.pseudocode']
 exclude_patterns = ['_build']

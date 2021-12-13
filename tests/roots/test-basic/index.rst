@@ -1,9 +1,9 @@
 Hi, basic test
 --------------
 
-.. mermaid::
+.. pcode::
+   :linenos:
 
-   sequenceDiagram
-      participant Alice
-      participant Bob
-      Alice->John: Hello John, how are you?
+    \begin{algorithmic}
+    \PRINT \texttt{'hello world'}
+    \end{algorithmic}
