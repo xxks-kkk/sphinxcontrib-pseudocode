@@ -1,21 +1,25 @@
 # -*- coding: utf-8 -*-
 
 import io
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
-readme = io.open('README.md', encoding="utf-8").read()
-version = '0.0.1'
+version = '0.3.0'
+
+# read the contents of your README file
+from pathlib import Path
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='sphinxcontrib-pseudocode',
     version=version,
     url='https://github.com/xxks-kkk/sphinxcontrib-algo/',
-    download_url='https://pypi.python.org/pypi/sphinxcontrib-mermaid',
     license='BSD',
     author=u'Zeyuan Hu',
     author_email='zeyuan.zack.hu@gmail.com',
     description='Use pseudocode.js natively in yours Sphinx powered docs',
-    long_description="""Use pseudocode.js natively in sphinx-doc""",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -35,7 +39,7 @@ setup(
         'Topic :: Utilities',
     ],
     platforms='any',
-    packages=find_packages(),
+    packages=find_namespace_packages(),
     include_package_data=True,
     namespace_packages=['sphinxcontrib'],
 )

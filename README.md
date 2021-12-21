@@ -42,14 +42,32 @@ directive in any `.rst` files as follows:
 
 The above code will be rendered as 
 
-![quicksort-demo](img/quicksort-demo.png)
+![quicksort-demo](https://raw.githubusercontent.com/xxks-kkk/sphinxcontrib-pseudocode/master/img/quicksort-demo.png)
 
 See more examples on [demo page](https://zhu45.org/sphinxcontrib-pseudocode/).
 
-## Installation
+## Installation and Configuration
 
+Install the package via 
+
+```
+$ pip install sphinxcontrib-pseudocode
+```
+
+Then in the Sphinx-doc ``conf.py``, add
+
+```
+extensions = [
+    'sphinxcontrib.pseudocode'
+]
+```
 
 ## Usage
 
+Write LaTeX algorithm within ``pcode`` directive as shown above. The following option is supported:
+
+- ``linenos`` (``LineNumber`` in pseudocode.js: Whether line numbering is enabled)
 
 ## For Developer
+
+This [blog](https://zhu45.org/posts/2021/Dec/21/release-of-sphinxcontrib-pseudocode/) explains the underlying implementation details of this extension.
