@@ -44,5 +44,12 @@ The above code will be rendered as
 
 ![quicksort-demo](img/quicksort-demo.png)
 
-See more examples on 
+See more examples on [demo page](https://zhu45.org/sphinxcontrib-pseudocode/).
 
+## Installation
+
+
+## Usage
+
+
+## For Developer
