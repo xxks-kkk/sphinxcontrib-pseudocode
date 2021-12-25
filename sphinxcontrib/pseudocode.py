@@ -5,7 +5,7 @@
 
     Allow typeset algorithms in latex powered by pseudocode.js inside sphinx-doc
 
-    :copyright: Copyright 2016-2021 by Zeyuan Hu, Martín Gaitán, and others, see AUTHORS.
+    :copyright: Copyright 2021 by Zeyuan Hu.
     :license: BSD, see LICENSE for details.
 """
 
@@ -20,6 +20,7 @@ import sphinx
 from docutils import nodes
 from docutils.parsers.rst import Directive, directives
 from docutils.statemachine import ViewList
+from sphinx.domains.std import StandardDomain
 from sphinx.util import logging
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,12 @@ mapname_re = re.compile(r'<map id="(.*?)"')
 filename_autorenderer = 'katex_autorenderer.js'
 
 
-class pseudocode(nodes.General, nodes.Inline, nodes.Element):
+class pseudocode(nodes.General, nodes.Element):
+    pass
+
+
+class ContentNode(nodes.General, nodes.Element):
+    """Content of pseudocode."""
     pass
 
 
@@ -38,6 +44,7 @@ def align_spec(argument):
 
 
 class Pseudocode(Directive):
+    """An environment for pseudocode."""
     has_content = True
     required_arguments = 0
     optional_arguments = 0
@@ -47,7 +54,6 @@ class Pseudocode(Directive):
     }
 
     def get_mm_code(self):
-        # inline pseudocode code
         pcode = '\n'.join(self.content)
         if not pcode.strip():
             return [self.state_machine.reporter.warning(
@@ -56,14 +62,20 @@ class Pseudocode(Directive):
         return pcode
 
     def run(self):
-
         node = pseudocode()
         node['code'] = self.get_mm_code()
-        node['id'] = uuid.uuid4()
-        node['options'] = {}
-        if 'linenos' in self.options:
-            node['linenos'] = True
+        node = pseudocode_wrapper(self, node)
 
+        content = ContentNode()
+        content['code'] = self.get_mm_code()
+        content['id'] = uuid.uuid4()
+        content['options'] = {}
+        if 'linenos' in self.options:
+            content['linenos'] = True
+
+        node += content
+
+        self.add_name(node)
         return [node]
 
 
@@ -72,9 +84,7 @@ def _render_mm_html_raw(self, node, code, options, prefix='pseudocode',
     tag_template = """<pre id="{id}" style="display:hidden;">
             {code}
         </pre>"""
-
     self.body.append(tag_template.format(id=node.get('id'), code=self.encode(code)))
-    raise nodes.SkipNode
 
 
 def render_mm_html(self, node, code, options, prefix='pseudocode',
@@ -83,10 +93,6 @@ def render_mm_html(self, node, code, options, prefix='pseudocode',
     if _fmt == 'raw':
         return _render_mm_html_raw(self, node, code, options, prefix='pseudocode',
                                    imgcls=None, alt=None)
-
-
-def html_visit_pseudocode(self, node):
-    render_mm_html(self, node, node['code'], node['options'])
 
 
 def write_katex_autorenderer_file(app, filename, dicts):
@@ -105,10 +111,15 @@ def katex_autorenderer_content(app, dicts):
             }});''')
     functions = ''
     for pairs in dicts:
-        functions += '''pseudocode.renderElement(document.getElementById("{id}"));\n'''.format(id=pairs['id']) if \
+        # assume there is one number in parentId (with format "id#" where "#" is a number)
+        parentId = int("".join(filter(str.isdigit, pairs.get('parentId'))))
+        if (parentId > 0):
+            parentId -= 1
+        functions += '''pseudocode.renderElement(document.getElementById("{id}", {{captionCount: {parentId}}}));\n'''.format(
+            id=pairs['id'], parentId=parentId) if \
             pairs['linenos'] == False \
-            else '''pseudocode.renderElement(document.getElementById("{id}"), {{lineNumber: true}});\n'''.format(
-            id=pairs['id'])
+            else '''pseudocode.renderElement(document.getElementById("{id}"), {{captionCount: {parentId}}}, {{lineNumber: true}});\n'''.format(
+            id=pairs['id'], parentId=parentId)
     content = content.format(functions=functions)
     prefix = ''
     suffix = ''
@@ -140,8 +151,10 @@ def install_js2(app, doctree, fromdocname):
     we can create associate document.getElementById functions
     """
     dicts = []
-    for node in doctree.traverse(pseudocode):
-        pairs = {'id': node['id'], 'linenos': True if 'linenos' in node else False}
+    for node in doctree.traverse(ContentNode):
+        pairs = {'id': node['id'],
+                 'linenos': True if 'linenos' in node else False,
+                 'parentId': node.parent.attributes.get('ids')[0]}
         dicts.append(pairs)
     write_katex_autorenderer_file(app, filename_autorenderer, dicts)
 
@@ -164,12 +177,95 @@ def builder_finished(app, exception):
     shutil.rmtree(app._katex_static_path)
 
 
+def pseudocode_wrapper(directive, node, caption=None):
+    """Parse caption, and append it to the node."""
+    parsed = nodes.Element()
+    if caption is None:
+        caption_node = nodes.caption()
+    else:
+        directive.state.nested_parse(
+            ViewList([caption], source=""), directive.content_offset, parsed
+        )
+        caption_node = nodes.caption(parsed[0].rawsource, "", *parsed[0].children)
+        caption_node.source = parsed[0].source
+        caption_node.line = parsed[0].line
+    node += caption_node
+    return node
+
+
+class PseudocodeDomain(StandardDomain):
+    """Pseudocode domain"""
+
+    name = "pseudocodecounter"
+    label = "Pseudocode Counter"
+
+    directives = {"pseudocode": Pseudocode}
+
+
+################################################################################
+# HTML
+def html_visit_stuff_node(self, node):
+    """Enter :class:`pseudocode` in HTML builder."""
+    self.body.append(self.starttag(node, "div", CLASS="pseudocode"))
+
+
+def html_depart_stuff_node(self, node):
+    """Leave :class:`pseudocode` in HTML builder."""
+    # pylint: disable=unused-argument
+    self.body.append("</div>")
+
+
+def html_visit_caption_node(self, node):
+    """Enter :class:`CaptionNode` in HTML builder."""
+    self.body.append(self.starttag(node, "div", CLASS="pseudocode-caption"))
+    if node.astext():
+        self.body.append(" — ")
+        self.body.append(self.starttag(node, "span", CLASS="caption-text"))
+
+
+def html_depart_caption_node(self, node):
+    """Leave :class:`CaptionNode` in HTML builder."""
+    if node.astext():
+        self.body.append("</span>")
+    self.body.append("</div>")
+
+
+def html_visit_content_node(self, node):
+    """Enter :class:`ContentNode` in HTML builder."""
+    self.body.append(self.starttag(node, "div", CLASS="pseudocode-content"))
+    render_mm_html(self, node, node['code'], node['options'])
+
+
+def html_depart_content_node(self, node):
+    """Leave :class:`ContentNode` in HTML builder."""
+    # pylint: disable=unused-argument
+    self.body.append("</div>")
+
+
 def setup(app):
-    app.add_node(pseudocode,
-                 html=(html_visit_pseudocode, None))
+    """Setup extension.
+    """
+    app.add_domain(PseudocodeDomain)
+
+    app.add_enumerable_node(
+        pseudocode,
+        "pseudocode",
+        html=(html_visit_stuff_node, html_depart_stuff_node),
+    )
+    app.add_node(
+        nodes.caption,
+        override=True,
+        html=(html_visit_caption_node, html_depart_caption_node),
+    )
+    app.add_node(
+        ContentNode,
+        html=(html_visit_content_node, html_depart_content_node),
+    )
+
     app.add_directive('pcode', Pseudocode)
     app.add_config_value('pseudocode_version', 'latest', 'html')
     app.add_config_value('pseudocode_output_format', 'raw', 'html')
+    app.config.numfig_format.setdefault('pseudocode', 'Algorithm %s')
     app.connect('builder-inited', builder_inited)
     app.connect('doctree-resolved', install_js2)
     app.connect('html-page-context', install_js2_part2)
