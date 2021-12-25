@@ -3,7 +3,7 @@
 import io
 from setuptools import setup, find_namespace_packages
 
-version = '0.3.0'
+version = '0.4.0'
 
 # read the contents of your README file
 from pathlib import Path
@@ -17,7 +17,7 @@ setup(
     license='BSD',
     author=u'Zeyuan Hu',
     author_email='zeyuan.zack.hu@gmail.com',
-    description='Use pseudocode.js natively in yours Sphinx powered docs',
+    description='write LaTeX algorithm in your sphinx-doc powered docs',
     long_description=long_description,
     long_description_content_type='text/markdown',
     classifiers=[

@@ -51,7 +51,7 @@ See more examples on [demo page](https://zhu45.org/sphinxcontrib-pseudocode/).
 Install the package via 
 
 ```
-$ pip install sphinxcontrib-pseudocode
+pip install sphinxcontrib-pseudocode
 ```
 
 Then in the Sphinx-doc ``conf.py``, add
