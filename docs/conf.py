@@ -17,8 +17,8 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
+import os
+import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
 
@@ -28,11 +28,14 @@
 #
 # needs_sphinx = '1.0'
 
+# [UNCOMMENT FOR DEVELOPMENT] sys.path.append(os.path.abspath('../sphinxcontrib'))
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
     'sphinxcontrib.pseudocode',
+    # [UNCOMMENT FOR DEVELOPMENT] 'pseudocode',
     'sphinx.ext.autosummary'
 ]
 
@@ -106,5 +109,5 @@ html_show_sourcelink = True
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'sphinxcontrib-pseudocodedoc'
 
-
+numfig = True
 

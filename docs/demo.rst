@@ -1,4 +1,4 @@
-
+.. _hello-world-algo:
 .. pcode::
    :linenos:
 
@@ -6,6 +6,7 @@
     \PRINT \texttt{'hello world'}
     \end{algorithmic}
 
+.. _quick-sort:
 .. pcode::
    :linenos:
 
@@ -77,6 +78,7 @@
     \END{ALGORITHMIC}
     \END{ALGORITHM}
 
+.. _test-control-blocks:
 .. pcode::
 
     \begin{algorithm}
