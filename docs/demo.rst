@@ -66,6 +66,8 @@
     \end{algorithmic}
     \end{algorithm}
 
+.. pcode::
+
     \begin{algorithm}
     \caption{Test atoms}
     \begin{algorithmic}
@@ -142,6 +144,9 @@
     \ENDPROCEDURE
     \end{algorithmic}
     \end{algorithm}
+
+.. pcode::
+
     \begin{algorithm}
     \caption{Test statements and comments}
     \begin{algorithmic}
