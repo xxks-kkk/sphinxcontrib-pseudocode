@@ -42,7 +42,7 @@ directive in any `.rst` files as follows:
 
 The above code will be rendered as 
 
-![quicksort-demo](https://raw.githubusercontent.com/xxks-kkk/sphinxcontrib-pseudocode/master/img/quicksort-demo.png)
+![quicksort-demo](https://raw.githubusercontent.com/xxks-kkk/sphinxcontrib-pseudocode/master/tests/roots/test-basic/_static/quicksort-demo.png)
 
 See more examples on [demo page](https://zhu45.org/sphinxcontrib-pseudocode/).
 

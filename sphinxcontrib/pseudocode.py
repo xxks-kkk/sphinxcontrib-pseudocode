@@ -46,6 +46,9 @@ class pseudocodeContentNode(nodes.General, nodes.Element):
     """Content of pseudocode."""
     pass
 
+class pseudocodeCaption(nodes.caption):
+    """Caption of pseudocode."""
+    pass
 
 class Pseudocode(Directive):
     """An environment for pseudocode."""
@@ -173,12 +176,12 @@ def pseudocode_wrapper(directive, node, caption=None):
     """Parse caption, and append it to the node."""
     parsed = nodes.Element()
     if caption is None:
-        caption_node = nodes.caption()
+        caption_node = pseudocodeCaption()
     else:
         directive.state.nested_parse(
             ViewList([caption], source=""), directive.content_offset, parsed
         )
-        caption_node = nodes.caption(parsed[0].rawsource, "", *parsed[0].children)
+        caption_node = pseudocodeCaption(parsed[0].rawsource, "", *parsed[0].children)
         caption_node.source = parsed[0].source
         caption_node.line = parsed[0].line
     node += caption_node
@@ -255,8 +258,7 @@ def setup(app):
         html=(html_visit_stuff_node, html_depart_stuff_node),
     )
     app.add_node(
-        nodes.caption,
-        override=True,
+        pseudocodeCaption,
         html=(html_visit_caption_node, html_depart_caption_node),
     )
     app.add_node(
