@@ -1,0 +1,303 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>&lt;no title&gt; &#8212; sphinxcontrib-pseudocode  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.min.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.js"></script>
+    <script src="_static/katex_autorenderer_demo.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="pseudocode" id="id1">
+<span id="hello-world-algo"></span><div class="pseudocode-caption">
+</div><div class="pseudocode-content">
+<pre id="" style="display:hidden;">
+             \begin{algorithmic}
+ \PRINT \texttt{'hello world'}
+ \end{algorithmic}
+        </pre></div></div><div class="pseudocode" id="id2">
+<span id="quick-sort"></span><div class="pseudocode-caption">
+</div><div class="pseudocode-content">
+<pre id="" style="display:hidden;">
+             % This quicksort algorithm is extracted from Chapter 7, Introduction to Algorithms (3rd edition)
+ \begin{algorithm}
+ \caption{Quicksort}
+ \begin{algorithmic}
+ \PROCEDURE{Quicksort}{$A, p, r$}
+     \IF{$p &lt; r$}
+         \STATE $q = $ \CALL{Partition}{$A, p, r$}
+         \STATE \CALL{Quicksort}{$A, p, q - 1$}
+         \STATE \CALL{Quicksort}{$A, q + 1, r$}
+     \ENDIF
+ \ENDPROCEDURE
+ \PROCEDURE{Partition}{$A, p, r$}
+     \STATE $x = A[r]$
+     \STATE $i = p - 1$
+     \FOR{$j = p$ \TO $r - 1$}
+         \IF{$A[j] &lt; x$}
+             \STATE $i = i + 1$
+             \STATE exchange
+             $A[i]$ with     $A[j]$
+         \ENDIF
+         \STATE exchange $A[i]$ with $A[r]$
+     \ENDFOR
+ \ENDPROCEDURE
+ \end{algorithmic}
+ \end{algorithm}
+        </pre></div></div><div class="pseudocode" id="id3">
+<div class="pseudocode-caption">
+</div><div class="pseudocode-content">
+<pre id="" style="display:hidden;">
+            \begin{algorithm}
+\caption{Test text-style}
+\begin{algorithmic}
+\REQUIRE some preconditions
+\ENSURE some postconditions
+\INPUT some inputs
+\OUTPUT some outputs
+\PROCEDURE{Test-Declarations}{}
+    \STATE font families: {\sffamily sffamily, \ttfamily ttfamily, \normalfont normalfont, \rmfamily rmfamily.}
+    \STATE font weights: {normal weight, \bfseries bold, \mdseries
+    medium, \lfseries lighter. }
+    \STATE font shapes: {\itshape itshape \scshape Small-Caps \slshape slshape \upshape upshape.}
+    \STATE font sizes: \tiny tiny \scriptsize scriptsize \footnotesize
+    footnotesize \small small \normalsize normal \large large \Large Large
+    \LARGE LARGE \huge huge \Huge Huge \normalsize
+\ENDPROCEDURE
+\PROCEDURE{Test-Commands}{}
+    \STATE \textnormal{textnormal,} \textrm{textrm,} \textsf{textsf,} \texttt{texttt.}
+    \STATE \textbf{textbf,} \textmd{textmd,} \textlf{textlf.}
+    \STATE \textup{textup,} \textit{textit,} \textsc{textsc,} \textsl{textsl.}
+    \STATE \uppercase{uppercase,} \lowercase{LOWERCASE.}
+\ENDPROCEDURE
+\PROCEDURE{Test-Colors}{}
+% feature not implemented
+\ENDPROCEDURE
+\end{algorithmic}
+\end{algorithm}
+        </pre></div></div><div class="pseudocode" id="id4">
+<div class="pseudocode-caption">
+</div><div class="pseudocode-content">
+<pre id="" style="display:hidden;">
+            \begin{algorithm}
+\caption{Test atoms}
+\begin{algorithmic}
+\STATE \textbf{Specials:} \{ \} \$ \&amp; \# \% \_
+\STATE \textbf{Bools:} \AND \OR \NOT \TRUE \FALSE
+\STATE \textbf{Carriage return:} first line \\ second line
+\STATE \textbf{Text-symbols:} \textbackslash
+\STATE \textbf{Quote-symbols:} `single quotes', ``double quotes''
+\STATE \textbf{Math:} $(\mathcal{C}_m)$, $i \gets i + 1$, $E=mc^2$, \( x^n + y^n = z^n \), $\$$, \(\$\)
+\END{ALGORITHMIC}
+\END{ALGORITHM}
+        </pre></div></div><div class="pseudocode" id="id5">
+<span id="test-control-blocks"></span><div class="pseudocode-caption">
+</div><div class="pseudocode-content">
+<pre id="" style="display:hidden;">
+            \begin{algorithm}
+\caption{Test control blocks}
+\begin{algorithmic}
+\PROCEDURE{Test-If}{}
+    \IF{ &lt;cond&gt;}
+        \STATE &lt;block&gt;;
+    \ELIF{&lt;cond&gt;}
+        \STATE &lt;block&gt;;
+    \ELSE
+        \STATE &lt;block&gt;;
+    \ENDIF
+\ENDPROCEDURE
+\PROCEDURE{Test-For}{$n$}
+    \STATE $i \gets 0$
+    \FOR{$i &lt; n$}
+        \PRINT $i$
+        \STATE $i \gets i + 1$
+    \ENDFOR
+\ENDPROCEDURE
+\PROCEDURE{Test-For-To}{$n$}
+    \STATE $i \gets 0$
+    \FOR{$i$ \TO $n$}
+        \PRINT $i$
+    \ENDFOR
+\ENDPROCEDURE
+\PROCEDURE{Test-For-DownTo}{$n$}
+    \FOR{$i \gets n$ \DOWNTO $0$}
+        \PRINT $i$
+    \ENDFOR
+\ENDPROCEDURE
+\PROCEDURE{Test-For-All}{$n$}
+    \FORALL{$i \in \{0, 1, \cdots, n\}$}
+        \PRINT $i$
+    \ENDFOR
+\ENDPROCEDURE
+\PROCEDURE{Test-While}{$n$}
+    \STATE $i \gets 0$
+    \WHILE{$i &lt; n$}
+        \PRINT $i$
+        \STATE $i \gets i + 1$
+    \ENDWHILE
+\ENDPROCEDURE
+\PROCEDURE{Test-Repeat}{$n$}
+    \STATE $i \gets 0$
+    \REPEAT
+        \PRINT $i$
+        \STATE $i \gets i + 1$
+    \UNTIL{$i&gt;n$}
+\ENDPROCEDURE
+\PROCEDURE{Test-Break-Continue}{$n$}
+    \FOR{$i = 0$ \TO $2n$}
+        \IF{$i &lt; n/2$}
+            \CONTINUE
+        \ELIF{$i &gt; n$}
+            \BREAK
+        \ENDIF
+        \PRINT $i$
+    \ENDFOR
+\ENDPROCEDURE
+\end{algorithmic}
+\end{algorithm}
+        </pre></div></div><div class="pseudocode" id="id6">
+<div class="pseudocode-caption">
+</div><div class="pseudocode-content">
+<pre id="" style="display:hidden;">
+            \begin{algorithm}
+\caption{Test statements and comments}
+\begin{algorithmic}
+\PROCEDURE{Test-Statements}{}
+    \STATE This line is a normal statement
+    \PRINT \texttt{`this is print statement'}
+    \RETURN $retval$
+\ENDPROCEDURE
+
+\PROCEDURE{Test-Comments}{} \COMMENT{comment for procedure}
+    \STATE a statement \COMMENT{inline comment}
+    \STATE \COMMENT{line comment}
+    \IF{some condition}\COMMENT{comment for if}
+        \RETURN \TRUE \COMMENT{another inline comment}
+    \ELSE \COMMENT{comment for else}
+        \RETURN \FALSE \COMMENT{yet another inline comment}
+    \ENDIF
+\ENDPROCEDURE
+\end{algorithmic}
+\end{algorithm}
+        </pre></div></div><div class="pseudocode" id="id7">
+<div class="pseudocode-caption">
+</div><div class="pseudocode-content">
+<pre id="" style="display:hidden;">
+            % This quicksort algorithm is extracted from Chapter 7, Introduction
+% to Algorithms (3rd edition)
+\begin{algorithm}
+\caption{Quicksort}
+\begin{algorithmic}
+\PROCEDURE{Quicksort}{$A, p, r$}
+    \IF{$p &lt; r$}
+        \STATE $q = $ \CALL{Partition}{$A, p, r$}
+        \STATE \CALL{Quicksort}{$A, p, q - 1$}
+        \STATE \CALL{Quicksort}{$A, q + 1, r$}
+    \ENDIF
+\ENDPROCEDURE
+\PROCEDURE{Partition}{$A, p, r$}
+    \STATE $x = A[r]$
+    \STATE $i = p - 1$
+    \FOR{$j = p$ \TO $r - 1$}
+        \IF{$A[j] &lt; x$}
+            \STATE $i = i + 1$
+            \STATE exchange
+            $A[i]$ with $A[j]$
+        \ENDIF
+        \STATE exchange $A[i]$ with $A[r]$
+    \ENDFOR
+\ENDPROCEDURE
+\end{algorithmic}
+\end{algorithm}
+        </pre></div></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">sphinxcontrib-pseudocode</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Zeyuan Hu.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.3.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/demo.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
