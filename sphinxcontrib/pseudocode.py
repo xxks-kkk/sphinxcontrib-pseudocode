@@ -22,6 +22,9 @@ from docutils.parsers.rst import Directive, directives
 from docutils.statemachine import ViewList
 from sphinx.domains.std import StandardDomain
 from sphinx.util import logging
+from sphinx.util.i18n import search_image_for_language
+from sphinx.util.docutils import SphinxDirective
+from sphinx.locale import __
 
 logger = logging.getLogger(__name__)
 
@@ -50,27 +53,62 @@ class pseudocodeCaption(nodes.caption):
     """Caption of pseudocode."""
     pass
 
-class Pseudocode(Directive):
+class Pseudocode(SphinxDirective):
     """An environment for pseudocode."""
     has_content = True
     required_arguments = 0
-    optional_arguments = 0
+    optional_arguments = 1
     final_argument_whitespace = False
     option_spec = {
-        'linenos': directives.unchanged
+        'linenos': directives.unchanged,
+        "name": directives.unchanged
     }
 
     def get_mm_code(self):
-        pcode = '\n'.join(self.content)
-        if not pcode.strip():
-            return [self.state_machine.reporter.warning(
-                'Ignoring "pcode" directive without content.',
-                line=self.lineno)]
-        return pcode
+        document = self.state.document
+        if self.arguments:
+            if self.content:
+                return [
+                    document.reporter.warning(
+                        __("Only explicit path supported"), line=self.lineno
+                    )
+                ]
+            argument = search_image_for_language(self.arguments[0], self.env)
+            rel_filename, filename = self.env.relfn2path(argument)
+            self.env.note_dependency(rel_filename)
+            try:
+                with open(filename, encoding="utf-8") as fp:
+                    code = fp.read()
+            except OSError:
+                return [
+                    document.reporter.warning(
+                        __(
+                            "External pcode file %r not found or reading "
+                            "it failed"
+                        )
+                        % filename,
+                        line=self.lineno,
+                    )
+                ]
+        else:
+            code = "\n".join(self.content)
+            if not code.strip():
+                return [
+                    self.state_machine.reporter.warning(
+                        __('Ignoring "pcode" directive without content.'),
+                        line=self.lineno,
+                    )
+                ]
+        return code
 
     def run(self):
         node = pseudocode()
         node['code'] = self.get_mm_code()
+        
+        # Add linenos at the root as well for latex
+        if 'linenos' in self.options:
+            node['linenos'] = True
+            
         node = pseudocode_wrapper(self, node)
 
         content = pseudocodeContentNode()
@@ -246,6 +284,21 @@ def html_depart_pseudocode_content_node(self, node):
     """Leave :class:`pseudocodeContentNode` in HTML builder."""
     self.body.append("</div>")
 
+def render_pseudo_latex(self, code: str, lineNumbering: bool, label: str):
+    if lineNumbering:
+        # Inject line numbering
+        code = code.replace("\\begin{algorithmic}", "\\begin{algorithmic}[1]")
+    
+    # Inject the label at the end of the algorithm
+    code = code.replace("\\end{algorithm}", label + "\\end{algorithm}")
+
+    self.body.append(code)
+
+def latex_visit_pseudocode_node(self, node):
+    label = self.hypertarget_to(node)
+    render_pseudo_latex(self, node['code'], 'linenos' in node, label)
+    raise nodes.SkipNode
+
 
 def setup(app):
     """Setup extension.
@@ -256,6 +309,7 @@ def setup(app):
         pseudocode,
         "pseudocode",
         html=(html_visit_stuff_node, html_depart_stuff_node),
+        latex=(latex_visit_pseudocode_node, None)
     )
     app.add_node(
         pseudocodeCaption,
@@ -271,5 +325,9 @@ def setup(app):
     app.connect('builder-inited', builder_inited)
     app.connect('html-page-context', install_js2_part2)
     app.connect('build-finished', builder_finished)
+
+    # Add latex packages
+    app.add_latex_package('algorithm')
+    app.add_latex_package('algpseudocode')
 
     return {'version': sphinx.__display_version__, 'parallel_read_safe': True}
