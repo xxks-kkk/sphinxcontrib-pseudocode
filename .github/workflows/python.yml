@@ -9,18 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ '3.6', '3.7', '3.8' ]
+        python-version: [ '3.10', '3.11', '3.12' ]
     name: Python ${{ matrix.python-version }} sample
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-          architecture: x64
-      - run: |
-          pip install -r docs/requirements.txt
-          pip install pytest
-          pip install -e .
-          pytest
+      - run: uv sync --extra dev
+      - run: uv run pytest

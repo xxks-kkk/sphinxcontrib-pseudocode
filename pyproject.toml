@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sphinxcontrib-pseudocode"
+version = "0.7.0"
+description = "write LaTeX algorithm in your sphinx-doc powered docs"
+readme = "README.md"
+license = {text = "BSD"}
+authors = [
+    {name = "Zeyuan Hu", email = "zeyuan.zack.hu@gmail.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Documentation",
+    "Topic :: Utilities",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "Sphinx>=4.3",
+    "docutils>=0.17",
+]
+
+[project.urls]
+Homepage = "https://github.com/xxks-kkk/sphinxcontrib-algo/"
+
+[project.optional-dependencies]
+docs = [
+    "myst-parser>=0.15.1",
+]
+dev = [
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+namespaces = true
+
+[tool.bumpversion]
+current_version = "0.7.0"
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
