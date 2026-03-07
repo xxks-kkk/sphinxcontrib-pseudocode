@@ -149,6 +149,9 @@ def pseudocode_autorenderer_content(app, dicts):
             document.addEventListener("DOMContentLoaded", function() {{
               var renderAll = function() {{
                 {functions}
+                if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {{
+                  MathJax.typesetPromise();
+                }}
               }};
               if (typeof MathJax !== 'undefined' && MathJax.startup) {{
                 MathJax.startup.promise.then(renderAll);
