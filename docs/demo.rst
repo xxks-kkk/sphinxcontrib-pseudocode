@@ -196,3 +196,70 @@
     \ENDPROCEDURE
     \end{algorithmic}
     \end{algorithm}
+
+Custom Macros with ``\newcommand``
+------------------------------------
+
+You can define your own LaTeX macros using ``\newcommand`` in three ways:
+
+1. **Inline Macros**: Define the macro at the beginning of the ``pcode`` block.
+   The macro will only be available for that specific block.
+
+   .. note::
+
+      Due to a quirk in the reStructuredText parser, a directive's content
+      block cannot begin with a ``\``. To avoid issues, do not start a
+      ``pcode`` block directly with a ``\newcommand``. The simplest workaround
+      is to add a comment line before the first macro definition.
+
+   .. pcode::
+
+      % A comment to avoid parser issues
+      \newcommand{\floor}[1]{\lfloor #1 \rfloor}
+
+      \begin{algorithm}
+      \caption{Using an Inline Macro}
+      \begin{algorithmic}
+      \STATE The floor of 3.14 is $\floor{3.14}$.
+      \end{algorithmic}
+      \end{algorithm}
+
+2. **Per-Page Macros**: Define macros in a ``.. math::`` block. These macros
+   will be available to all ``pcode`` blocks on the same page.
+
+   .. math::
+
+      \newcommand{\ceil}[1]{\lceil #1 \rceil}
+
+   .. pcode::
+
+      \begin{algorithm}
+      \caption{Using a Per-Page Macro}
+      \begin{algorithmic}
+      \STATE The ceiling of 3.14 is $\ceil{3.14}$.
+      \end{algorithmic}
+      \end{algorithm}
+
+3. **Global Macros**: Define macros in your ``conf.py`` file using the
+   ``mathjax3_config`` setting. These macros will be available across your
+   entire Sphinx project.
+
+   .. code-block:: python
+
+      # In conf.py
+      mathjax3_config = {
+          'tex': {
+              'macros': {
+                  'RR': r'\mathbb{R}',
+              }
+          }
+      }
+
+   .. pcode::
+
+      \begin{algorithm}
+      \caption{Using a Global Macro}
+      \begin{algorithmic}
+      \STATE The set of real numbers is $\RR$.
+      \end{algorithmic}
+      \end{algorithm}

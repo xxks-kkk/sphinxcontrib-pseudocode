@@ -27,12 +27,15 @@ logger = logging.getLogger(__name__)
 
 mapname_re = re.compile(r'<map id="(.*?)"')
 
-filename_autorenderer = 'katex_autorenderer_{}.js'
+_NEWCOMMAND_RE = re.compile(
+    r'\\newcommand\{(\\[^}]+)\}(?:\[(\d+)\])?\{((?:[^{}]|\{[^{}]*\})*)\}'
+)
+
+filename_autorenderer = 'pseudocode_autorenderer_{}.js'
 
 PROOF_HTML_TITLE_TEMPLATE_VISIT = """ 
     pseudocode.renderElement(
     document.getElementById("{{ id }}"), {
-        {% if captionCount %} captionCount: {{ captionCount }} ,{% endif %}
         {% if lineNumber %} lineNumber: true {% endif %}
     });\n
 """
@@ -69,12 +72,33 @@ class Pseudocode(Directive):
         return pcode
 
     def run(self):
+        all_code = self.get_mm_code()
+        if not isinstance(all_code, str):
+            # It's a warning list, return it
+            return all_code
+
+        caption_match = re.search(r'\\caption\{([^}]+)\}', all_code)
+        caption = caption_match.group(1) if caption_match else None
+
         node = pseudocode()
-        node['code'] = self.get_mm_code()
-        node = pseudocode_wrapper(self, node)
+        node['code'] = all_code
+        node = pseudocode_wrapper(self, node, caption)
 
         content = pseudocodeContentNode()
-        content['code'] = self.get_mm_code()
+        
+        lines = all_code.split('\n')
+        macros = []
+        code_lines = []
+        for line in lines:
+            if line.strip().startswith('\\newcommand'):
+                macros.append(line)
+            else:
+                code_lines.append(line)
+        
+        content['code'] = '\n'.join(code_lines)
+        content['inline_macros'] = macros
+        content['page_macros'] = []  # filled in by doctree-resolved handler
+
         content['options'] = {}
         if 'linenos' in self.options:
             content['linenos'] = True
@@ -87,23 +111,40 @@ class Pseudocode(Directive):
 
 def render_mm_html(self, node, code, options, prefix='pseudocode',
                    imgcls=None, alt=None):
+    
+    all_macros = node.get('page_macros', []) + node.get('inline_macros', [])
+    
+    if all_macros:
+        macros_str = '\n'.join(all_macros)
+        hidden_div = f'<div style="display:none;">\\[\n{macros_str}\n\\]</div>'
+        self.body.append(hidden_div)
+
     tag_template = """<pre id="{id}" style="display:hidden;">
             {code}
         </pre>"""
-    self.body.append(tag_template.format(id=get_fignumber(self, node), code=self.encode(code)))
-    node['id'] = get_fignumber(self, node)
+    self.body.append(tag_template.format(id=get_fignumber(self.builder, node), code=self.encode(code)))
+    node['id'] = get_fignumber(self.builder, node)
 
 
-def write_katex_autorenderer_file(app, filename, dicts):
+
+
+
+
+
+
+
+
+
+def write_pseudocode_autorenderer_file(app, filename, dicts):
     filename = os.path.join(
         app.builder.srcdir, app._katex_static_path, filename
     )
-    content = katex_autorenderer_content(app, dicts)
+    content = pseudocode_autorenderer_content(app, dicts)
     with open(filename, 'w') as file:
         file.write(content)
 
 
-def katex_autorenderer_content(app, dicts):
+def pseudocode_autorenderer_content(app, dicts):
     content = dedent('''\
             document.addEventListener("DOMContentLoaded", function() {{
               {functions}
@@ -111,54 +152,18 @@ def katex_autorenderer_content(app, dicts):
     functions = ''
     for pairs in dicts:
         if (pairs['id'] != ''):
-            parentId = int(pairs['id'])
-            if (parentId > 0):
-                parentId -= 1
             functions += jinja2.Template(PROOF_HTML_TITLE_TEMPLATE_VISIT).render(
                 id=pairs['id'],
-                captionCount=parentId,
                 lineNumber=pairs['linenos']
             )
 
     content = content.format(functions=functions)
-    prefix = ''
-    suffix = ''
-    options = ''
-    delimiters = ''
-    return '\n'.join([prefix, options, delimiters, suffix, content])
+    return content
 
 
 def builder_inited(app):
     setup_static_path(app)
     install_js(app)
-
-
-def install_js(app, *args):
-    # add required javascript
-    app.add_js_file(f"https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.js")
-    old_css_add = getattr(app, 'add_stylesheet', None)
-    add_css = getattr(app, 'add_css_file', old_css_add)
-    add_css(f"https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.min.css")
-    app.add_js_file(f"https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.js")
-
-
-def install_js2_part2(app, pagename, templatename, context, doctree):
-    """
-    Generate katex_autorenderer.js based on ids of each pcode and associated options so that
-    we can create associate document.getElementById functions. Then, we register katex_autorenderer.js.
-    """
-    dicts = []
-    if doctree is not None:
-        for node in doctree.traverse(pseudocodeContentNode):
-            pairs = {'id': node['id'],
-                     'linenos': True if 'linenos' in node else False,
-                     'parentId': node.parent.attributes.get('ids')[0]}
-            dicts.append(pairs)
-        if len(dicts) > 0:
-            filename_autorenderer_specific = filename_autorenderer.format(
-                os.path.split(doctree.attributes.get('source'))[-1].split('.')[0])
-            write_katex_autorenderer_file(app, filename_autorenderer_specific, dicts)
-            app.add_js_file(filename_autorenderer_specific)
 
 
 def setup_static_path(app):
@@ -170,6 +175,53 @@ def setup_static_path(app):
 def builder_finished(app, exception):
     # Delete temporary dir used for _static file
     shutil.rmtree(app._katex_static_path)
+
+def install_js(app, *args):
+    app.add_js_file("https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.js")
+    old_css_add = getattr(app, 'add_stylesheet', None)
+    add_css = getattr(app, 'add_css_file', old_css_add)
+    add_css("https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.min.css")
+
+
+def doctree_resolved(app, doctree, docname):
+    """Extract \\newcommand from math blocks and attach to pcode nodes."""
+    page_macros = []
+    for math_node in doctree.findall(nodes.math_block):
+        content = math_node.astext()
+        for raw in _NEWCOMMAND_RE.findall(content):
+            cmd, nargs, body = raw
+            if nargs:
+                page_macros.append(f'\\newcommand{{{cmd}}}[{nargs}]{{{body}}}')
+            else:
+                page_macros.append(f'\\newcommand{{{cmd}}}{{{body}}}')
+
+    for content_node in doctree.findall(pseudocodeContentNode):
+        content_node['page_macros'] = list(page_macros)
+
+
+def install_js2_part2(app, pagename, templatename, context, doctree):
+    if not doctree:
+        return
+
+    # Generate and register autorenderer
+    dicts = []
+    if doctree:
+        for node in doctree.findall(pseudocodeContentNode):
+            pairs = {'id': get_fignumber(app.builder, node),
+                     'linenos': True if 'linenos' in node else False}
+            dicts.append(pairs)
+    
+    if len(dicts) > 0:
+        filename_autorenderer_specific = filename_autorenderer.format(
+            os.path.split(doctree.attributes.get('source'))[-1].split('.')[0])
+        write_pseudocode_autorenderer_file(app, filename_autorenderer_specific, dicts)
+        app.add_js_file(filename_autorenderer_specific)
+
+
+
+
+
+
 
 
 def pseudocode_wrapper(directive, node, caption=None):
@@ -199,15 +251,15 @@ class PseudocodeDomain(StandardDomain):
 
 ################################################################################
 # HTML
-def get_fignumber(writer, node):
+def get_fignumber(builder, node):
     """Compute and return the theorem number of `node`."""
     # Copied from the sphinx project: sphinx.writers.html.HTMLTranslator.add_fignumber()
-    if not isinstance(node.parent, pseudocode):
+    if not isinstance(node.parent, pseudocode) or not node.parent['ids']:
         return ""
     figure_id = node.parent["ids"][0]
     key = "pseudocode"
-    if figure_id in writer.builder.fignumbers.get(key, {}):
-        return ".".join(map(str, writer.builder.fignumbers[key][figure_id]))
+    if figure_id in builder.fignumbers.get(key, {}):
+        return ".".join(map(str, builder.fignumbers[key][figure_id]))
     return ""
 
 
@@ -269,6 +321,7 @@ def setup(app):
     app.add_directive('pcode', Pseudocode)
     app.config.numfig_format.setdefault('pseudocode', 'Algorithm %s')
     app.connect('builder-inited', builder_inited)
+    app.connect('doctree-resolved', doctree_resolved)
     app.connect('html-page-context', install_js2_part2)
     app.connect('build-finished', builder_finished)
 

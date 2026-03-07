@@ -58,6 +58,7 @@ Then in the Sphinx-doc ``conf.py``, add
 
 ```
 extensions = [
+    'sphinx.ext.mathjax',
     'sphinxcontrib.pseudocode'
 ]
 ```
