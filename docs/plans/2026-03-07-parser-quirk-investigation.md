@@ -56,6 +56,28 @@ ewcommand`, the line with the backslash is no longer the first thing the parser 
 - When the backslash is escaped (`
 ewcommand`), the parser correctly interprets it as a literal backslash and passes the correct string to the directive.
 
+## Design Implication: Why Preamble-Only Stripping Cannot Work
+
+The implementation plan originally proposed extracting `\newcommand` only from a
+strict preamble — lines at the very top of the pcode content, before any
+non-`\newcommand` line. This approach is incompatible with the RST quirk:
+
+- The RST quirk **forces** users to add `% comment` before any leading `\newcommand`.
+- A strict preamble treats `% comment` as a non-`\newcommand` line and ends the
+  preamble immediately, so the `\newcommand` that follows is never extracted.
+- Result: inline macros are completely unusable.
+
+The two constraints are fundamentally incompatible:
+
+```
+RST quirk forces:    % comment \n \newcommand{\foo}{...}
+Strict preamble sees: % comment → preamble ends → \newcommand NOT stripped
+```
+
+The correct implementation strips `\newcommand` from **any position** in the pcode
+content, regardless of what precedes it. This is the only approach that works
+end-to-end for users following the documented workaround.
+
 ## Solution and Final Decision
 
 While the root cause lies within `docutils`, modifying the behavior of the upstream parser is outside the scope of this extension.
