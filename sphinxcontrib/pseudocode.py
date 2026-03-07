@@ -119,7 +119,7 @@ def render_mm_html(self, node, code, options, prefix='pseudocode',
         hidden_div = f'<div style="display:none;">\\[\n{macros_str}\n\\]</div>'
         self.body.append(hidden_div)
 
-    tag_template = """<pre id="{id}" style="display:hidden;">
+    tag_template = """<pre id="{id}" style="display:none;">
             {code}
         </pre>"""
     self.body.append(tag_template.format(id=get_fignumber(self.builder, node), code=self.encode(code)))
@@ -147,7 +147,14 @@ def write_pseudocode_autorenderer_file(app, filename, dicts):
 def pseudocode_autorenderer_content(app, dicts):
     content = dedent('''\
             document.addEventListener("DOMContentLoaded", function() {{
-              {functions}
+              var renderAll = function() {{
+                {functions}
+              }};
+              if (typeof MathJax !== 'undefined' && MathJax.startup) {{
+                MathJax.startup.promise.then(renderAll);
+              }} else {{
+                renderAll();
+              }}
             }});''')
     functions = ''
     for pairs in dicts:
