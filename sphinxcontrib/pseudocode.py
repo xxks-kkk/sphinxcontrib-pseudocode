@@ -294,18 +294,17 @@ def html_depart_stuff_node(self, node):
 
 
 def html_visit_caption_node(self, node):
-    """Enter :class:`CaptionNode` in HTML builder."""
-    self.body.append(self.starttag(node, "div", CLASS="pseudocode-caption"))
-    if node.astext():
-        self.body.append(" — ")
-        self.body.append(self.starttag(node, "span", CLASS="caption-text"))
+    """Enter :class:`CaptionNode` in HTML builder.
+    Emit nothing — pseudocode.js renders the \\caption{} visually inside the
+    algorithm box.  The node still lives in the doctree so Sphinx fignumbers
+    machinery can number it for :numref: cross-references.
+    """
+    raise nodes.SkipNode
 
 
 def html_depart_caption_node(self, node):
     """Leave :class:`CaptionNode` in HTML builder."""
-    if node.astext():
-        self.body.append("</span>")
-    self.body.append("</div>")
+    pass
 
 
 def html_visit_pseudocode_content_node(self, node):
