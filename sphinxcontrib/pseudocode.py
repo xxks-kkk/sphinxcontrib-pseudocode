@@ -36,6 +36,7 @@ filename_autorenderer = 'pseudocode_autorenderer_{}.js'
 PROOF_HTML_TITLE_TEMPLATE_VISIT = """ 
     pseudocode.renderElement(
     document.getElementById("{{ id }}"), {
+        captionCount: {{ captionCount }},
         {% if lineNumber %} lineNumber: true {% endif %}
     });\n
 """
@@ -164,7 +165,8 @@ def pseudocode_autorenderer_content(app, dicts):
         if (pairs['id'] != ''):
             functions += jinja2.Template(PROOF_HTML_TITLE_TEMPLATE_VISIT).render(
                 id=pairs['id'],
-                lineNumber=pairs['linenos']
+                lineNumber=pairs['linenos'],
+                captionCount=pairs.get('captionCount', 0)
             )
 
     content = content.format(functions=functions)
@@ -217,8 +219,16 @@ def install_js2_part2(app, pagename, templatename, context, doctree):
     dicts = []
     if doctree:
         for node in doctree.findall(pseudocodeContentNode):
-            pairs = {'id': get_fignumber(app.builder, node),
-                     'linenos': True if 'linenos' in node else False}
+            fig_id = get_fignumber(app.builder, node)
+            # captionCount seeds pseudocode.js's counter to fignumber-1 so it
+            # increments to fignumber, matching Sphinx's :numref: value.
+            try:
+                caption_count = int(fig_id.split('.')[-1]) - 1
+            except (ValueError, AttributeError):
+                caption_count = 0
+            pairs = {'id': fig_id,
+                     'linenos': True if 'linenos' in node else False,
+                     'captionCount': caption_count}
             dicts.append(pairs)
     
     if len(dicts) > 0:
