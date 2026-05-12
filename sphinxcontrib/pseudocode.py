@@ -33,7 +33,7 @@ _NEWCOMMAND_RE = re.compile(
 
 filename_autorenderer = 'pseudocode_autorenderer_{}.js'
 
-PROOF_HTML_TITLE_TEMPLATE_VISIT = """ 
+PROOF_HTML_TITLE_TEMPLATE_VISIT = """
     pseudocode.renderElement(
     document.getElementById("{{ id }}"), {
         captionCount: {{ captionCount }},
@@ -86,7 +86,7 @@ class Pseudocode(Directive):
         node = pseudocode_wrapper(self, node, caption)
 
         content = pseudocodeContentNode()
-        
+
         lines = all_code.split('\n')
         macros = []
         code_lines = []
@@ -95,8 +95,8 @@ class Pseudocode(Directive):
                 macros.append(line)
             else:
                 code_lines.append(line)
-        
-        content['code'] = '\n'.join(code_lines)
+
+        content['code'] = all_code
         content['inline_macros'] = macros
         content['page_macros'] = []  # filled in by doctree-resolved handler
 
@@ -112,9 +112,9 @@ class Pseudocode(Directive):
 
 def render_mm_html(self, node, code, options, prefix='pseudocode',
                    imgcls=None, alt=None):
-    
+
     all_macros = node.get('page_macros', []) + node.get('inline_macros', [])
-    
+
     if all_macros:
         macros_str = '\n'.join(all_macros)
         hidden_div = f'<div style="display:none;">\\[\n{macros_str}\n\\]</div>'
@@ -125,15 +125,6 @@ def render_mm_html(self, node, code, options, prefix='pseudocode',
         </pre>"""
     self.body.append(tag_template.format(id=get_fignumber(self.builder, node), code=self.encode(code)))
     node['id'] = get_fignumber(self.builder, node)
-
-
-
-
-
-
-
-
-
 
 
 def write_pseudocode_autorenderer_file(app, filename, dicts):
@@ -230,18 +221,12 @@ def install_js2_part2(app, pagename, templatename, context, doctree):
                      'linenos': True if 'linenos' in node else False,
                      'captionCount': caption_count}
             dicts.append(pairs)
-    
+
     if len(dicts) > 0:
         filename_autorenderer_specific = filename_autorenderer.format(
             os.path.split(doctree.attributes.get('source'))[-1].split('.')[0])
         write_pseudocode_autorenderer_file(app, filename_autorenderer_specific, dicts)
         app.add_js_file(filename_autorenderer_specific)
-
-
-
-
-
-
 
 
 def pseudocode_wrapper(directive, node, caption=None):

@@ -263,3 +263,24 @@ You can define your own LaTeX macros using ``\newcommand`` in three ways:
       \STATE The set of real numbers is $\RR$.
       \end{algorithmic}
       \end{algorithm}
+
+Custom Keywords via ``\newcommand``
+------------------------------------
+
+You can use ``\newcommand`` to define custom algorithmic-level keywords that
+look and behave like built-in ones such as ``\FOR`` or ``\STATE``. Define the
+macro inside the ``pcode`` block (preceded by a comment line to avoid a
+reStructuredText parser quirk) and use it as any other command:
+
+.. pcode::
+
+   % define a custom SPAWN keyword
+   \newcommand{\SPAWN}[1]{\STATE \textbf{spawn} #1}
+   \begin{algorithm}
+   \caption{Parallel Worker}
+   \begin{algorithmic}
+   \FOR{$i = 1$ \TO $n$}
+     \SPAWN{worker($i$)}
+   \ENDFOR
+   \end{algorithmic}
+   \end{algorithm}
