@@ -11,8 +11,6 @@
 
 import os
 import re
-import shutil
-from tempfile import mkdtemp
 from textwrap import dedent
 
 import jinja2
@@ -128,11 +126,11 @@ def render_mm_html(self, node, code, options, prefix='pseudocode',
 
 
 def write_pseudocode_autorenderer_file(app, filename, dicts):
-    filename = os.path.join(
-        app.builder.srcdir, app._katex_static_path, filename
-    )
+    outdir = os.path.join(app.builder.outdir, '_static')
+    os.makedirs(outdir, exist_ok=True)
+    filepath = os.path.join(outdir, filename)
     content = pseudocode_autorenderer_content(app, dicts)
-    with open(filename, 'w') as file:
+    with open(filepath, 'w') as file:
         file.write(content)
 
 
@@ -165,19 +163,11 @@ def pseudocode_autorenderer_content(app, dicts):
 
 
 def builder_inited(app):
-    setup_static_path(app)
     install_js(app)
 
 
-def setup_static_path(app):
-    app._katex_static_path = mkdtemp()
-    if app._katex_static_path not in app.config.html_static_path:
-        app.config.html_static_path.append(app._katex_static_path)
-
-
 def builder_finished(app, exception):
-    # Delete temporary dir used for _static file
-    shutil.rmtree(app._katex_static_path)
+    pass
 
 def install_js(app, *args):
     app.add_js_file("https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.js")

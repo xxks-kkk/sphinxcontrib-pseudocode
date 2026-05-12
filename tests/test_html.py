@@ -21,6 +21,21 @@ def test_html_raw(index):
     assert '<span class="caption-number">Fig. 1 </span>' in index
 
 
+@pytest.mark.sphinx('html', testroot="basic")
+def test_autorenderer_js_written_to_static(app, build_all):
+    """pseudocode_autorenderer_<page>.js must exist in _static/ after build.
+
+    Regression test: Sphinx 8+ copies assets before writing pages, so the
+    file must be written directly to outdir/_static/ rather than a temp dir
+    that gets copied during the asset phase (which runs before html-page-context).
+    """
+    js_file = app.outdir / '_static' / 'pseudocode_autorenderer_index.js'
+    assert js_file.exists(), (
+        f"{js_file} not found — autorenderer JS was not written to _static/"
+    )
+    assert 'DOMContentLoaded' in js_file.read_text()
+
+
 @pytest.fixture
 def index_newcommand(app, build_all):
     return (app.outdir / 'index.html').read_text()
