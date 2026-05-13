@@ -27,8 +27,7 @@
         \FOR{$j = p$ \TO $r - 1$}
             \IF{$A[j] < x$}
                 \STATE $i = i + 1$
-                \STATE exchange
-                $A[i]$ with     $A[j]$
+                \STATE exchange $A[i]$ with $A[j]$
             \ENDIF
             \STATE exchange $A[i]$ with $A[r]$
         \ENDFOR
@@ -188,8 +187,7 @@
         \FOR{$j = p$ \TO $r - 1$}
             \IF{$A[j] < x$}
                 \STATE $i = i + 1$
-                \STATE exchange
-                $A[i]$ with $A[j]$
+                \STATE exchange $A[i]$ with $A[j]$
             \ENDIF
             \STATE exchange $A[i]$ with $A[r]$
         \ENDFOR

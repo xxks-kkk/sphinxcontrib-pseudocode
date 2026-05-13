@@ -48,12 +48,16 @@ def test_html_newcommand(index_newcommand):
 
 
 @pytest.mark.sphinx('html', testroot="newcommand")
-def test_inline_newcommand_in_pre(index_newcommand):
-    """Inline \\newcommand must appear inside the <pre> pseudocode block so
-    pseudocode.js can use it for custom keyword definitions."""
+def test_inline_newcommand_expanded_in_pre(index_newcommand):
+    """\\newcommand definitions must be expanded in the <pre> block sent to
+    pseudocode.js, and the raw \\newcommand lines must be absent (pseudocode.js
+    does not support \\newcommand and will throw a ParseError if it sees one)."""
     pre_match = re.search(r'<pre[^>]*>(.*?)</pre>', index_newcommand, re.DOTALL)
     assert pre_match is not None
-    assert r'\newcommand' in pre_match.group(1)
+    pre_content = pre_match.group(1)
+    assert r'\newcommand' not in pre_content
+    # \floor{3.14} should have been expanded to \lfloor 3.14 \rfloor
+    assert r'\lfloor 3.14 \rfloor' in pre_content
 
 
 @pytest.mark.sphinx('html', testroot="newcommand")

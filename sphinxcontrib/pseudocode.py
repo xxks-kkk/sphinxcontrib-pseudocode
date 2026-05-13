@@ -29,6 +29,89 @@ _NEWCOMMAND_RE = re.compile(
     r'\\newcommand\{(\\[^}]+)\}(?:\[(\d+)\])?\{((?:[^{}]|\{[^{}]*\})*)\}'
 )
 
+
+def _parse_brace_group(s: str, pos: int) -> tuple[str, int]:
+    """Parse a {}-delimited group starting at pos (which must be '{').
+
+    Returns (content_without_braces, end_pos_after_closing_brace).
+    Handles arbitrarily nested braces.
+    """
+    assert s[pos] == '{'
+    depth = 0
+    pos += 1
+    start = pos
+    while pos < len(s):
+        if s[pos] == '{':
+            depth += 1
+        elif s[pos] == '}':
+            if depth == 0:
+                return s[start:pos], pos + 1
+            depth -= 1
+        pos += 1
+    return s[start:], len(s)
+
+
+def _expand_macro_call(code: str, cmd: str, nargs: int, body: str) -> str:
+    """Replace all occurrences of ``cmd`` (with its ``nargs`` brace arguments)
+    in *code* with the expanded *body*, substituting ``#1``, ``#2``, … for the
+    matched arguments.  Leaves unrecognised call sites untouched.
+    """
+    pattern = re.compile(re.escape(cmd) + r'(?![a-zA-Z@])')
+    result: list[str] = []
+    i = 0
+    while i < len(code):
+        m = pattern.search(code, i)
+        if not m:
+            result.append(code[i:])
+            break
+        result.append(code[i:m.start()])
+        pos = m.end()
+        if nargs == 0:
+            result.append(body)
+            i = pos
+        else:
+            args: list[str] = []
+            tmp = pos
+            ok = True
+            for _ in range(nargs):
+                while tmp < len(code) and code[tmp] in ' \t\n':
+                    tmp += 1
+                if tmp >= len(code) or code[tmp] != '{':
+                    ok = False
+                    break
+                arg, tmp = _parse_brace_group(code, tmp)
+                args.append(arg)
+            if ok:
+                expanded = body
+                for j, arg in enumerate(args):
+                    expanded = expanded.replace(f'#{j + 1}', arg)
+                result.append(expanded)
+                i = tmp
+            else:
+                result.append(code[m.start():m.end()])
+                i = m.end()
+    return ''.join(result)
+
+
+def _expand_newcommands(code_lines: list[str], macros: list[str]) -> str:
+    """Expand ``\\newcommand`` macros in *code_lines* and return the resulting
+    code string (without the ``\\newcommand`` definition lines).
+
+    Each macro defined in *macros* is applied in order; later macros can refer
+    to earlier ones in their bodies.
+    """
+    macro_defs: list[tuple[str, int, str]] = []
+    for line in macros:
+        m = _NEWCOMMAND_RE.search(line)
+        if m:
+            cmd, nargs_str, body = m.groups()
+            macro_defs.append((cmd, int(nargs_str) if nargs_str else 0, body))
+
+    code = '\n'.join(code_lines)
+    for cmd, nargs, body in macro_defs:
+        code = _expand_macro_call(code, cmd, nargs, body)
+    return code
+
 filename_autorenderer = 'pseudocode_autorenderer_{}.js'
 
 PROOF_HTML_TITLE_TEMPLATE_VISIT = """
@@ -94,7 +177,7 @@ class Pseudocode(Directive):
             else:
                 code_lines.append(line)
 
-        content['code'] = all_code
+        content['code'] = _expand_newcommands(code_lines, macros)
         content['inline_macros'] = macros
         content['page_macros'] = []  # filled in by doctree-resolved handler
 
@@ -110,13 +193,6 @@ class Pseudocode(Directive):
 
 def render_mm_html(self, node, code, options, prefix='pseudocode',
                    imgcls=None, alt=None):
-
-    all_macros = node.get('page_macros', []) + node.get('inline_macros', [])
-
-    if all_macros:
-        macros_str = '\n'.join(all_macros)
-        hidden_div = f'<div style="display:none;">\\[\n{macros_str}\n\\]</div>'
-        self.body.append(hidden_div)
 
     tag_template = """<pre id="{id}" style="display:none;">
             {code}
@@ -137,11 +213,11 @@ def write_pseudocode_autorenderer_file(app, filename, dicts):
 def pseudocode_autorenderer_content(app, dicts):
     content = dedent('''\
             document.addEventListener("DOMContentLoaded", function() {{
-              var renderAll = function() {{
-                {functions}
+              var renderAll = async function() {{
                 if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {{
-                  MathJax.typesetPromise();
+                  await MathJax.typesetPromise();
                 }}
+                {functions}
               }};
               if (typeof MathJax !== 'undefined' && MathJax.startup) {{
                 MathJax.startup.promise.then(renderAll);
@@ -177,19 +253,22 @@ def install_js(app, *args):
 
 
 def doctree_resolved(app, doctree, docname):
-    """Extract \\newcommand from math blocks and attach to pcode nodes."""
-    page_macros = []
+    """Extract \\newcommand from math blocks, expand them in pcode nodes at build time."""
+    page_macro_lines = []
     for math_node in doctree.findall(nodes.math_block):
         content = math_node.astext()
         for raw in _NEWCOMMAND_RE.findall(content):
             cmd, nargs, body = raw
             if nargs:
-                page_macros.append(f'\\newcommand{{{cmd}}}[{nargs}]{{{body}}}')
+                page_macro_lines.append(f'\\newcommand{{{cmd}}}[{nargs}]{{{body}}}')
             else:
-                page_macros.append(f'\\newcommand{{{cmd}}}{{{body}}}')
+                page_macro_lines.append(f'\\newcommand{{{cmd}}}{{{body}}}')
 
     for content_node in doctree.findall(pseudocodeContentNode):
-        content_node['page_macros'] = list(page_macros)
+        content_node['page_macros'] = []
+        if page_macro_lines:
+            code_lines = content_node['code'].split('\n')
+            content_node['code'] = _expand_newcommands(code_lines, page_macro_lines)
 
 
 def install_js2_part2(app, pagename, templatename, context, doctree):
