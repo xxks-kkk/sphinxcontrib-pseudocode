@@ -3,9 +3,8 @@ set -x
 set -e
 
 sudo apt-get update
-sudo apt-get -y install rsync python3-sphinx python3-pip
+sudo apt-get -y install rsync
 
-pwd ls -lah
 export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
 
 ##############
@@ -14,12 +13,8 @@ export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
 
 # Python Sphinx, configured with source/conf.py
 # See https://www.sphinx-doc.org/
-python3 -m venv env/
-source env/bin/activate
-pip install -e ..
-pip install -r requirements.txt
-make clean
-make html
+uv run make clean
+uv run make html
 
 #######################
 # Update GitHub Pages #

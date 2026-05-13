@@ -93,3 +93,6 @@ ENV/
 
 # IDEA project settings
 .idea
+
+# Mac
+.DS_Store

@@ -56,6 +56,11 @@ filename = "pyproject.toml"
 search = 'version = "{current_version}"'
 replace = 'version = "{new_version}"'
 
+[tool.uv.workspace]
+members = [
+    "docs",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
