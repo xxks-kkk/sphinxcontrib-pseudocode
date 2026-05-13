@@ -48,12 +48,11 @@ def test_html_newcommand(index_newcommand):
 
 
 @pytest.mark.sphinx('html', testroot="newcommand")
-def test_inline_newcommand_in_pre(index_newcommand):
-    """Inline \\newcommand must appear inside the <pre> pseudocode block so
-    pseudocode.js can use it for custom keyword definitions."""
+def test_inline_newcommand_stripped(index_newcommand):
+    """Inline \\newcommand must not appear inside the <pre> pseudocode block."""
     pre_match = re.search(r'<pre[^>]*>(.*?)</pre>', index_newcommand, re.DOTALL)
     assert pre_match is not None
-    assert r'\newcommand' in pre_match.group(1)
+    assert r'\newcommand' not in pre_match.group(1)
 
 
 @pytest.mark.sphinx('html', testroot="newcommand")
