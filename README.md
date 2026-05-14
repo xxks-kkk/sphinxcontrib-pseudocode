@@ -56,12 +56,27 @@ pip install sphinxcontrib-pseudocode
 
 Then in the Sphinx-doc ``conf.py``, add
 
-```
+```python
 extensions = [
     'sphinx.ext.mathjax',
     'sphinxcontrib.pseudocode'
 ]
 ```
+
+**MathJax version requirement:** The current release of pseudocode.js (`@latest`, v2.4.1)
+requires `MathJax.tex2chtml`, which was removed in MathJax 4. Sphinx 8+ defaults to
+MathJax 4, so you must pin MathJax 3 explicitly in your ``conf.py``:
+
+```python
+mathjax_path = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'
+```
+
+Without this setting, algorithm blocks containing math expressions will silently fail
+to render in any Sphinx version that defaults to MathJax 4.
+
+> **Note:** MathJax 4 support has been merged into pseudocode.js but not yet released
+> ([commit 1ab6334](https://github.com/SaswatPadhi/pseudocode.js/commit/1ab63342dba3a046b258fae54132c5cfd32987b5)).
+> Once a new version is published to npm, the `mathjax_path` pin can be removed.
 
 ## Usage
 

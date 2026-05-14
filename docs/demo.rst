@@ -212,6 +212,24 @@ You can define your own LaTeX macros using ``\newcommand`` in three ways:
       ``pcode`` block directly with a ``\newcommand``. The simplest workaround
       is to add a comment line before the first macro definition.
 
+   For example, we can write 
+
+   .. code-block:: text
+      
+      .. pcode::
+
+         % A comment to avoid parser issues
+         \newcommand{\floor}[1]{\lfloor #1 \rfloor}
+
+         \begin{algorithm}
+         \caption{Using an Inline Macro}
+         \begin{algorithmic}
+         \STATE The floor of 3.14 is $\floor{3.14}$.
+         \end{algorithmic}
+         \end{algorithm}
+
+   and the code will get rendered as
+   
    .. pcode::
 
       % A comment to avoid parser issues
@@ -222,10 +240,28 @@ You can define your own LaTeX macros using ``\newcommand`` in three ways:
       \begin{algorithmic}
       \STATE The floor of 3.14 is $\floor{3.14}$.
       \end{algorithmic}
-      \end{algorithm}
+      \end{algorithm}      
 
 2. **Per-Page Macros**: Define macros in a ``.. math::`` block. These macros
-   will be available to all ``pcode`` blocks on the same page.
+   will be available to all ``pcode`` blocks on the same page. For
+   example, we can write
+
+   .. code-block:: text
+
+      .. math::
+
+         \newcommand{\ceil}[1]{\lceil #1 \rceil}
+
+      .. pcode::
+
+         \begin{algorithm}
+         \caption{Using a Per-Page Macro}
+         \begin{algorithmic}
+         \STATE The ceiling of 3.14 is $\ceil{3.14}$.
+         \end{algorithmic}
+         \end{algorithm}
+
+   and the code will get rendered as
 
    .. math::
 
@@ -238,7 +274,8 @@ You can define your own LaTeX macros using ``\newcommand`` in three ways:
       \begin{algorithmic}
       \STATE The ceiling of 3.14 is $\ceil{3.14}$.
       \end{algorithmic}
-      \end{algorithm}
+      \end{algorithm}      
+         
 
 3. **Global Macros**: Define macros in your ``conf.py`` file using the
    ``mathjax3_config`` setting. These macros will be available across your
@@ -255,6 +292,21 @@ You can define your own LaTeX macros using ``\newcommand`` in three ways:
           }
       }
 
+   Then we can write
+
+   .. code-block:: text
+
+      .. pcode::
+
+         \begin{algorithm}
+         \caption{Using a Global Macro}
+         \begin{algorithmic}
+         \STATE The set of real numbers is $\RR$.
+         \end{algorithmic}
+         \end{algorithm}
+
+   and the code will get rendered as
+         
    .. pcode::
 
       \begin{algorithm}
@@ -262,4 +314,4 @@ You can define your own LaTeX macros using ``\newcommand`` in three ways:
       \begin{algorithmic}
       \STATE The set of real numbers is $\RR$.
       \end{algorithmic}
-      \end{algorithm}
+      \end{algorithm}      

@@ -111,3 +111,15 @@ htmlhelp_basename = 'sphinxcontrib-pseudocodedoc'
 
 numfig = True
 
+# pseudocode.js v2.4.1 (@latest) requires MathJax.tex2chtml, which was removed in
+# MathJax 4.  MathJax 4 support is merged upstream but not yet released.
+# Remove this pin once a new pseudocode.js version with MathJax 4 support is on npm.
+mathjax_path = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'
+
+mathjax3_config = {
+    'tex': {
+        'macros': {
+            'RR': r'\mathbb{R}',
+        }
+    }
+}

@@ -9,6 +9,7 @@
     :license: BSD, see LICENSE for details.
 """
 
+import json
 import os
 import re
 from textwrap import dedent
@@ -134,18 +135,48 @@ def render_mm_html(self, node, code, options, prefix='pseudocode',
 
 
 
-def write_pseudocode_autorenderer_file(app, filename, dicts):
+def write_pseudocode_autorenderer_file(app, filename, dicts, all_macros=None):
     outdir = os.path.join(app.builder.outdir, '_static')
     os.makedirs(outdir, exist_ok=True)
     filepath = os.path.join(outdir, filename)
-    content = pseudocode_autorenderer_content(app, dicts)
+    content = pseudocode_autorenderer_content(app, dicts, all_macros)
     with open(filepath, 'w') as file:
         file.write(content)
 
 
-def pseudocode_autorenderer_content(app, dicts):
+def pseudocode_autorenderer_content(app, dicts, all_macros=None):
+    functions = ''
+    for pairs in dicts:
+        if (pairs['id'] != ''):
+            functions += jinja2.Template(PROOF_HTML_TITLE_TEMPLATE_VISIT).render(
+                id=pairs['id'],
+                lineNumber=pairs['linenos'],
+                captionCount=pairs.get('captionCount', 0)
+            )
+
+    # Convert \newcommand strings to MathJax tex.macros format so macros are
+    # configured before MathJax initialises (the autorenderer is synchronous;
+    # MathJax is deferred, so it reads window.MathJax on startup).
+    mathjax_macros = {}
+    for macro_str in (all_macros or []):
+        m = _NEWCOMMAND_RE.match(macro_str.strip())
+        if m:
+            cmd, nargs, body = m.groups()
+            cmd_name = cmd[1:]  # strip leading backslash
+            mathjax_macros[cmd_name] = [body, int(nargs)] if nargs else body
+
+    sync_macro_init = ''
+    if mathjax_macros:
+        macros_json = json.dumps(mathjax_macros)
+        sync_macro_init = (
+            'window.MathJax = window.MathJax || {};\n'
+            'window.MathJax.tex = window.MathJax.tex || {};\n'
+            # Existing user macros (from mathjax3_config) take priority over ours.
+            f'window.MathJax.tex.macros = Object.assign({macros_json}, window.MathJax.tex.macros || {{}});\n'
+        )
+
     content = dedent('''\
-            document.addEventListener("DOMContentLoaded", function() {{
+            {sync_macro_init}document.addEventListener("DOMContentLoaded", function() {{
               var renderAll = function() {{
                 {functions}
                 if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {{
@@ -158,16 +189,8 @@ def pseudocode_autorenderer_content(app, dicts):
                 renderAll();
               }}
             }});''')
-    functions = ''
-    for pairs in dicts:
-        if (pairs['id'] != ''):
-            functions += jinja2.Template(PROOF_HTML_TITLE_TEMPLATE_VISIT).render(
-                id=pairs['id'],
-                lineNumber=pairs['linenos'],
-                captionCount=pairs.get('captionCount', 0)
-            )
 
-    content = content.format(functions=functions)
+    content = content.format(functions=functions, sync_macro_init=sync_macro_init)
     return content
 
 
@@ -207,6 +230,8 @@ def install_js2_part2(app, pagename, templatename, context, doctree):
 
     # Generate and register autorenderer
     dicts = []
+    seen_macros = set()
+    all_macros = []
     if doctree:
         for node in doctree.findall(pseudocodeContentNode):
             fig_id = get_fignumber(app.builder, node)
@@ -220,11 +245,15 @@ def install_js2_part2(app, pagename, templatename, context, doctree):
                      'linenos': True if 'linenos' in node else False,
                      'captionCount': caption_count}
             dicts.append(pairs)
-    
+            for m in (node.get('page_macros', []) + node.get('inline_macros', [])):
+                if m not in seen_macros:
+                    seen_macros.add(m)
+                    all_macros.append(m)
+
     if len(dicts) > 0:
         filename_autorenderer_specific = filename_autorenderer.format(
             os.path.split(doctree.attributes.get('source'))[-1].split('.')[0])
-        write_pseudocode_autorenderer_file(app, filename_autorenderer_specific, dicts)
+        write_pseudocode_autorenderer_file(app, filename_autorenderer_specific, dicts, all_macros)
         app.add_js_file(filename_autorenderer_specific)
 
 
