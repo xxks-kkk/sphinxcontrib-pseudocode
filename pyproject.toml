@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sphinxcontrib-pseudocode"
-version = "0.7.0"
+version = "0.8.0"
 description = "write LaTeX algorithm in your sphinx-doc powered docs"
 readme = "README.md"
 license = {text = "BSD"}
@@ -53,8 +53,7 @@ current_version = "0.8.0"
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"
-search = 'version = "{current_version}"'
-replace = 'version = "{new_version}"'
+key_path = "project.version"
 
 [tool.uv.workspace]
 members = [

@@ -687,7 +687,7 @@ wheels = [
 
 [[package]]
 name = "sphinxcontrib-pseudocode"
-version = "0.7.0"
+version = "0.8.0"
 source = { editable = "." }
 dependencies = [
     { name = "docutils", version = "0.21.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
