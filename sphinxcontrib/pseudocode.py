@@ -30,14 +30,31 @@ _NEWCOMMAND_RE = re.compile(
     r'\\newcommand\{(\\[^}]+)\}(?:\[(\d+)\])?\{((?:[^{}]|\{[^{}]*\})*)\}'
 )
 
+_REF_PATTERN = re.compile(r':ref:`([^`<]+?)(?:\s*<([^>]+)>)?`')
+
 filename_autorenderer = 'pseudocode_autorenderer_{}.js'
 
-PROOF_HTML_TITLE_TEMPLATE_VISIT = """ 
-    pseudocode.renderElement(
-    document.getElementById("{{ id }}"), {
-        captionCount: {{ captionCount }},
-        {% if lineNumber %} lineNumber: true {% endif %}
-    });\n
+PROOF_HTML_TITLE_TEMPLATE_VISIT = """
+    (function() {
+        var pcsEl = document.getElementById("{{ id }}");
+        {% if ref_replacements_json %}
+        var pcsContainer = pcsEl ? pcsEl.parentElement : null;
+        {% endif %}
+        pseudocode.renderElement(pcsEl, {
+            captionCount: {{ captionCount }},
+            {% if lineNumber %} lineNumber: true {% endif %}
+        });
+        {% if ref_replacements_json %}
+        if (pcsContainer) {
+            var refs = {{ ref_replacements_json }};
+            var html = pcsContainer.innerHTML;
+            refs.forEach(function(r) {
+                html = html.split(r.placeholder).join('<a href="' + r.href + '">' + r.text + '</a>');
+            });
+            pcsContainer.innerHTML = html;
+        }
+        {% endif %}
+    })();
 """
 
 
@@ -148,10 +165,12 @@ def pseudocode_autorenderer_content(app, dicts, all_macros=None):
     functions = ''
     for pairs in dicts:
         if (pairs['id'] != ''):
+            ref_replacements = pairs.get('ref_replacements', [])
             functions += jinja2.Template(PROOF_HTML_TITLE_TEMPLATE_VISIT).render(
                 id=pairs['id'],
                 lineNumber=pairs['linenos'],
-                captionCount=pairs.get('captionCount', 0)
+                captionCount=pairs.get('captionCount', 0),
+                ref_replacements_json=json.dumps(ref_replacements) if ref_replacements else ''
             )
 
     # Convert \newcommand strings to MathJax tex.macros format so macros are
@@ -208,6 +227,35 @@ def install_js(app, *args):
     add_css("https://cdn.jsdelivr.net/npm/pseudocode@latest/build/pseudocode.min.css")
 
 
+def _resolve_refs_in_code(code, docname, app):
+    """Replace :ref: roles in pcode content with placeholders.
+
+    Returns (modified_code, replacements) where replacements is a list of
+    dicts with keys 'placeholder', 'text', 'href' for JS post-processing.
+    """
+    std_labels = app.env.domaindata.get('std', {}).get('labels', {})
+    replacements = []
+
+    def replace(m):
+        display = m.group(1).strip()
+        target = (m.group(2) or display).strip().lower()
+        placeholder = f'PCSREF{len(replacements)}'
+        href = '#'
+        if target in std_labels:
+            target_docname, labelid, _ = std_labels[target]
+            try:
+                href = app.builder.get_relative_uri(docname, target_docname)
+                if labelid:
+                    href += '#' + labelid
+            except Exception:
+                pass
+        replacements.append({'placeholder': placeholder, 'text': display, 'href': href})
+        return placeholder
+
+    modified_code = _REF_PATTERN.sub(replace, code)
+    return modified_code, replacements
+
+
 def doctree_resolved(app, doctree, docname):
     """Extract \\newcommand from math blocks and attach to pcode nodes."""
     page_macros = []
@@ -222,6 +270,13 @@ def doctree_resolved(app, doctree, docname):
 
     for content_node in doctree.findall(pseudocodeContentNode):
         content_node['page_macros'] = list(page_macros)
+        if hasattr(app.builder, 'get_relative_uri'):
+            modified_code, replacements = _resolve_refs_in_code(
+                content_node['code'], docname, app
+            )
+            if replacements:
+                content_node['code'] = modified_code
+                content_node['ref_replacements'] = replacements
 
 
 def install_js2_part2(app, pagename, templatename, context, doctree):
@@ -243,7 +298,8 @@ def install_js2_part2(app, pagename, templatename, context, doctree):
                 caption_count = 0
             pairs = {'id': fig_id,
                      'linenos': True if 'linenos' in node else False,
-                     'captionCount': caption_count}
+                     'captionCount': caption_count,
+                     'ref_replacements': node.get('ref_replacements', [])}
             dicts.append(pairs)
             for m in (node.get('page_macros', []) + node.get('inline_macros', [])):
                 if m not in seen_macros:
