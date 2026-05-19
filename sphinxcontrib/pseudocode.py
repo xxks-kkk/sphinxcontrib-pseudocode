@@ -249,6 +249,13 @@ def _resolve_refs_in_code(code, docname, app):
                     href += '#' + labelid
             except Exception:
                 pass
+        else:
+            logger.warning(
+                "pcode: undefined label %r in :ref: role (in document %r)",
+                target, docname,
+                type='ref', subtype='ref',
+                location=docname,
+            )
         replacements.append({'placeholder': placeholder, 'text': display, 'href': href})
         return placeholder
 

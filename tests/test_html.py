@@ -201,3 +201,82 @@ def test_docs_page_macros_pre_configured(docs_autorenderer_js):
     assert '"floor"' in docs_autorenderer_js   # from inline \\newcommand in demo.rst
 
 
+# ---------------------------------------------------------------------------
+# :ref: inside pcode blocks (test-ref testroot)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.sphinx('html', testroot="ref")
+def test_ref_undefined_label_emits_warning(app, warning):
+    """An unresolvable :ref: inside a pcode block must emit a Sphinx warning.
+
+    This mirrors the behaviour of a plain :ref: in prose for an unknown label.
+    """
+    app.build()
+    assert 'no-such-label' in warning.getvalue(), (
+        'Expected a warning mentioning the undefined label "no-such-label"'
+    )
+
+@pytest.fixture
+def index_ref(app, build_all):
+    return (app.outdir / 'index.html').read_text()
+
+
+@pytest.fixture
+def autorenderer_js_ref(app, build_all):
+    return (app.outdir / '_static' / 'pseudocode_autorenderer_index.js').read_text()
+
+
+@pytest.mark.sphinx('html', testroot="ref")
+def test_ref_placeholder_in_pre(index_ref):
+    """:ref: inside pcode must be replaced by a PCSREF placeholder in the <pre> element.
+
+    The raw :ref:`...` markup must not reach pseudocode.js; it would be
+    rendered as literal text.  Instead _resolve_refs_in_code() substitutes
+    each :ref: with a unique PCSREF<N> token before the <pre> is emitted.
+    """
+    pre_blocks = re.findall(r'<pre[^>]*>(.*?)</pre>', index_ref, re.DOTALL)
+    assert any('PCSREF' in block for block in pre_blocks), (
+        'Expected a PCSREF placeholder inside a <pre> element'
+    )
+    assert not any(':ref:' in block for block in pre_blocks), (
+        'Raw :ref: markup must not appear inside any <pre> element'
+    )
+
+
+@pytest.mark.sphinx('html', testroot="ref")
+def test_ref_autorenderer_contains_replacement_data(autorenderer_js_ref):
+    """The autorenderer JS must carry the placeholder→href mapping for :ref: links.
+
+    After pseudocode.js renders the algorithm, a JS IIFE reads this data and
+    swaps each PCSREF placeholder in the container's innerHTML for an <a> tag.
+    """
+    assert 'PCSREF0' in autorenderer_js_ref
+    assert '"placeholder"' in autorenderer_js_ref
+    assert '"href"' in autorenderer_js_ref
+    assert 'Base Algorithm' in autorenderer_js_ref
+
+
+@pytest.mark.sphinx('html', testroot="ref")
+def test_ref_autorenderer_captures_container_before_render(autorenderer_js_ref):
+    """Within the ref-bearing IIFE, pcsContainer must be saved before renderElement().
+
+    pseudocode.js calls elem.replaceWith(), which removes the <pre> from the
+    DOM.  Any getElementById() call after that returns null.  The IIFE must
+    therefore capture parentElement before the renderElement() call.
+    """
+    # Find where pcsContainer is assigned (only present in IIFEs that have refs).
+    container_pos = autorenderer_js_ref.find('pcsContainer = pcsEl')
+    assert container_pos != -1, 'pcsContainer assignment not found in autorenderer'
+
+    # The renderElement call in the SAME IIFE must come after the assignment.
+    # Searching forward from container_pos skips any renderElement calls in
+    # earlier IIFEs (which have no refs) and lands on the one in this IIFE.
+    render_pos = autorenderer_js_ref.find('pseudocode.renderElement', container_pos)
+    assert render_pos != -1, (
+        'No pseudocode.renderElement found after pcsContainer assignment'
+    )
+    assert container_pos < render_pos, (
+        'pcsContainer must be captured before pseudocode.renderElement() is called'
+    )
+
+

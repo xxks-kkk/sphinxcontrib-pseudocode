@@ -197,6 +197,55 @@
     \end{algorithmic}
     \end{algorithm}
 
+Cross-References with ``:ref:``
+---------------------------------
+
+You can use RST ``:ref:`` roles inside a ``pcode`` block to link to any
+labeled algorithm (or any other labeled element) on the page.  The role is
+resolved at build time and rendered as a clickable ``<a>`` link in the
+algorithm body.
+
+For example, we can write
+
+.. code-block:: text
+
+   .. pcode::
+
+      \begin{algorithm}
+      \caption{A variant of Quicksort}
+      \begin{algorithmic}
+      \STATE Partition step is the same as in :ref:`Quicksort <quick-sort>`
+      \PROCEDURE{Quicksort-Variant}{$A, p, r$}
+          \IF{$p < r$}
+              \STATE $q = $ \CALL{Partition}{$A, p, r$}
+              \STATE \CALL{Quicksort-Variant}{$A, p, q - 1$}
+              \STATE \CALL{Quicksort-Variant}{$A, q + 1, r$}
+          \ENDIF
+      \ENDPROCEDURE
+      \end{algorithmic}
+      \end{algorithm}
+
+and the code will get rendered as
+
+.. pcode::
+
+   \begin{algorithm}
+   \caption{A variant of Quicksort}
+   \begin{algorithmic}
+   \STATE Partition step is the same as in :ref:`Quicksort <quick-sort>`
+   \PROCEDURE{Quicksort-Variant}{$A, p, r$}
+       \IF{$p < r$}
+           \STATE $q = $ \CALL{Partition}{$A, p, r$}
+           \STATE \CALL{Quicksort-Variant}{$A, p, q - 1$}
+           \STATE \CALL{Quicksort-Variant}{$A, q + 1, r$}
+       \ENDIF
+   \ENDPROCEDURE
+   \end{algorithmic}
+   \end{algorithm}
+
+The ``:ref:`` role supports both the short form ``:ref:`label``` and the
+long form ``:ref:`display text <label>```.
+
 Custom Macros with ``\newcommand``
 ------------------------------------
 
