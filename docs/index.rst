@@ -1,6 +1,6 @@
-****************************************
-Welcome to Sphinxcontrib-pseudocode demo
-****************************************
+*****************************
+sphinxcontrib-pseudocode demo
+*****************************
 
 .. toctree::
    :maxdepth: 2
