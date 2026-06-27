@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### New Features
+
+- **Cross-references inside `pcode` blocks.** You can now use Sphinx
+  cross-reference roles inside an algorithm body; they are resolved at build
+  time and rendered as clickable links:
+  - **`:ref:`** links to any labeled element (e.g. another algorithm). Supports
+    both `:ref:`label`` and `:ref:`display text <label>``.
+  - **`:eq:`** links to a labeled `.. math::` equation, rendered as the
+    equation number (e.g. `(2)`), matching `:eq:` behavior in prose.
+
 ## v0.8.0
 
 ### New Features

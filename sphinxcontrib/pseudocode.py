@@ -17,6 +17,7 @@ from textwrap import dedent
 import jinja2
 import sphinx
 from docutils import nodes
+from docutils.nodes import make_id
 from docutils.parsers.rst import Directive, directives
 from docutils.statemachine import ViewList
 from sphinx.domains.std import StandardDomain
@@ -31,6 +32,8 @@ _NEWCOMMAND_RE = re.compile(
 )
 
 _REF_PATTERN = re.compile(r':ref:`([^`<]+?)(?:\s*<([^>]+)>)?`')
+
+_EQ_PATTERN = re.compile(r':eq:`([^`<]+?)(?:\s*<([^>]+)>)?`')
 
 filename_autorenderer = 'pseudocode_autorenderer_{}.js'
 
@@ -228,7 +231,11 @@ def install_js(app, *args):
 
 
 def _resolve_refs_in_code(code, docname, app):
-    """Replace :ref: roles in pcode content with placeholders.
+    """Replace :ref: and :eq: roles in pcode content with placeholders.
+
+    pseudocode.js renders the pcode content verbatim, so Sphinx roles never
+    get resolved by the normal pipeline.  We substitute each role with a
+    unique PCSREF<N> token that a JS post-processor swaps back for an <a> tag.
 
     Returns (modified_code, replacements) where replacements is a list of
     dicts with keys 'placeholder', 'text', 'href' for JS post-processing.
@@ -236,10 +243,14 @@ def _resolve_refs_in_code(code, docname, app):
     std_labels = app.env.domaindata.get('std', {}).get('labels', {})
     replacements = []
 
-    def replace(m):
+    def add_replacement(text, href):
+        placeholder = f'PCSREF{len(replacements)}'
+        replacements.append({'placeholder': placeholder, 'text': text, 'href': href})
+        return placeholder
+
+    def replace_ref(m):
         display = m.group(1).strip()
         target = (m.group(2) or display).strip().lower()
-        placeholder = f'PCSREF{len(replacements)}'
         href = '#'
         if target in std_labels:
             target_docname, labelid, _ = std_labels[target]
@@ -256,11 +267,69 @@ def _resolve_refs_in_code(code, docname, app):
                 type='ref', subtype='ref',
                 location=docname,
             )
-        replacements.append({'placeholder': placeholder, 'text': display, 'href': href})
-        return placeholder
+        return add_replacement(display, href)
 
-    modified_code = _REF_PATTERN.sub(replace, code)
+    def replace_eq(m):
+        # The math domain ignores any explicit display text for :eq: and always
+        # renders the equation number, so the target is the only thing we need.
+        target = (m.group(2) or m.group(1)).strip()
+        text, href = _resolve_eq(target, docname, app)
+        return add_replacement(text, href)
+
+    modified_code = _REF_PATTERN.sub(replace_ref, code)
+    modified_code = _EQ_PATTERN.sub(replace_eq, modified_code)
     return modified_code, replacements
+
+
+def _resolve_eq(target, docname, app):
+    """Resolve an :eq: target to (link_text, href).
+
+    Mirrors sphinx.domains.math.MathDomain.resolve_xref so the rendered link
+    matches a :eq: used in ordinary prose: the text is the formatted equation
+    number and the href points at the equation anchor.
+    """
+    env = app.env
+    equations = env.get_domain('math').equations  # labelid -> (docname, number)
+
+    if target not in equations:
+        logger.warning(
+            "pcode: equation not found: %r in :eq: role (in document %r)",
+            target, docname,
+            type='ref', subtype='eq',
+            location=docname,
+        )
+        return target, '#'
+
+    target_docname, number = equations[target]
+    node_id = make_id('equation-%s' % target)
+
+    if getattr(env.config, 'math_numfig', False) and env.config.numfig:
+        if target_docname in env.toc_fignumbers:
+            toc_dm = env.toc_fignumbers[target_docname].get('displaymath', {})
+            numbers = toc_dm.get(node_id, ())
+            eqno = '.'.join(map(str, numbers))
+            numsep = getattr(env.config, 'math_numsep', '.')
+            eqno = numsep.join(eqno.rsplit('.', 1))
+        else:
+            eqno = ''
+    else:
+        eqno = str(number)
+
+    eqref_format = env.config.math_eqref_format or '({number})'
+    try:
+        text = eqref_format.format(number=eqno)
+    except (KeyError, IndexError):
+        text = '(%s)' % eqno
+
+    href = '#'
+    try:
+        href = app.builder.get_relative_uri(docname, target_docname)
+        if node_id:
+            href += '#' + node_id
+    except Exception:
+        pass
+
+    return text, href
 
 
 def doctree_resolved(app, doctree, docname):

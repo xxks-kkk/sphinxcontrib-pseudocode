@@ -280,3 +280,63 @@ def test_ref_autorenderer_captures_container_before_render(autorenderer_js_ref):
     )
 
 
+# ---------------------------------------------------------------------------
+# :eq: inside pcode blocks (test-eq testroot)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.sphinx('html', testroot="eq")
+def test_eq_undefined_label_emits_warning(app, warning):
+    """An unresolvable :eq: inside a pcode block must emit a Sphinx warning.
+
+    This mirrors the behaviour of a plain :eq: in prose for an unknown label.
+    """
+    app.build()
+    assert 'no-such-equation' in warning.getvalue(), (
+        'Expected a warning mentioning the undefined equation "no-such-equation"'
+    )
+
+
+@pytest.fixture
+def index_eq(app, build_all):
+    return (app.outdir / 'index.html').read_text()
+
+
+@pytest.fixture
+def autorenderer_js_eq(app, build_all):
+    return (app.outdir / '_static' / 'pseudocode_autorenderer_index.js').read_text()
+
+
+@pytest.mark.sphinx('html', testroot="eq")
+def test_eq_placeholder_in_pre(index_eq):
+    """:eq: inside pcode must be replaced by a PCSREF placeholder in the <pre>.
+
+    The raw :eq:`...` markup must not reach pseudocode.js; it would be
+    rendered as literal text.  Instead it is substituted with a unique
+    PCSREF<N> token before the <pre> is emitted, exactly like :ref:.
+    """
+    pre_blocks = re.findall(r'<pre[^>]*>(.*?)</pre>', index_eq, re.DOTALL)
+    assert any('PCSREF' in block for block in pre_blocks), (
+        'Expected a PCSREF placeholder inside a <pre> element'
+    )
+    assert not any(':eq:' in block for block in pre_blocks), (
+        'Raw :eq: markup must not appear inside any <pre> element'
+    )
+
+
+@pytest.mark.sphinx('html', testroot="eq")
+def test_eq_autorenderer_contains_equation_link(autorenderer_js_eq):
+    """The autorenderer JS must carry the placeholder→href mapping for :eq: links.
+
+    The href must point at the equation anchor and the link text must be the
+    formatted equation number (default ``(1)``).
+    """
+    assert '"placeholder"' in autorenderer_js_eq
+    assert '"href"' in autorenderer_js_eq
+    assert 'equation-my-equation' in autorenderer_js_eq, (
+        'Expected href to the equation anchor "#equation-my-equation"'
+    )
+    assert '(1)' in autorenderer_js_eq, (
+        'Expected the formatted equation number "(1)" as the link text'
+    )
+
+

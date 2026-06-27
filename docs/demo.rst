@@ -246,6 +246,53 @@ and the code will get rendered as
 The ``:ref:`` role supports both the short form ``:ref:`label``` and the
 long form ``:ref:`display text <label>```.
 
+Cross-References with ``:eq:``
+---------------------------------
+
+You can also use the ``:eq:`` role inside a ``pcode`` block to link to a
+labeled equation.  As with ``:eq:`` in ordinary prose, it renders as a
+clickable link whose text is the equation number.
+
+For example, given a labeled equation
+
+.. code-block:: text
+
+   .. math::
+      :label: euclidean-norm
+
+      \|v\| = \sqrt{v_1^2 + v_2^2 + \dots + v_n^2}
+
+we can write
+
+.. code-block:: text
+
+   .. pcode::
+
+      \begin{algorithm}
+      \caption{Normalize a vector}
+      \begin{algorithmic}
+      \STATE Compute the length of $v$ using :eq:`euclidean-norm`
+      \STATE $v \leftarrow v / \|v\|$
+      \end{algorithmic}
+      \end{algorithm}
+
+and the code will get rendered as
+
+.. math::
+   :label: euclidean-norm
+
+   \|v\| = \sqrt{v_1^2 + v_2^2 + \dots + v_n^2}
+
+.. pcode::
+
+   \begin{algorithm}
+   \caption{Normalize a vector}
+   \begin{algorithmic}
+   \STATE Compute the length of $v$ using :eq:`euclidean-norm`
+   \STATE $v \leftarrow v / \|v\|$
+   \end{algorithmic}
+   \end{algorithm}
+
 Custom Macros with ``\newcommand``
 ------------------------------------
 
