@@ -61,7 +61,14 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinxcontrib.pseudocode'
 ]
+
+numfig = True
 ```
+
+**numfig requirement:** ``numfig = True`` is required — Sphinx's figure numbers are used
+as the DOM ids that the renderer looks up, so without them (or for a document not
+included in any toctree) ``pcode`` blocks are not rendered and a build warning is
+emitted (suppress with ``suppress_warnings = ['pseudocode.nonumber']``).
 
 **MathJax version requirement:** The current release of pseudocode.js (`@latest`, v2.4.1)
 requires `MathJax.tex2chtml`, which was removed in MathJax 4. Sphinx 8+ defaults to

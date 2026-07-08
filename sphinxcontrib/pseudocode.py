@@ -369,6 +369,17 @@ def install_js2_part2(app, pagename, templatename, context, doctree):
     if doctree:
         for node in doctree.findall(pseudocodeContentNode):
             fig_id = get_fignumber(app.builder, node)
+            if not fig_id:
+                logger.warning(
+                    "pcode block in %r will not be rendered: Sphinx assigned "
+                    "it no figure number. Set numfig = True in conf.py and "
+                    "make sure the document is included in a toctree. This "
+                    "warning can be silenced via "
+                    "suppress_warnings = ['pseudocode.nonumber'].",
+                    pagename,
+                    type='pseudocode', subtype='nonumber',
+                    location=pagename,
+                )
             # captionCount seeds pseudocode.js's counter to fignumber-1 so it
             # increments to fignumber, matching Sphinx's :numref: value.
             try:

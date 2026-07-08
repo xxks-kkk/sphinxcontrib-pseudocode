@@ -356,3 +356,24 @@ def test_eq_autorenderer_contains_equation_link(autorenderer_js_eq):
     )
 
 
+
+# ---------------------------------------------------------------------------
+# pcode blocks without a figure number (test-nonumfig testroot)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.sphinx('html', testroot="nonumfig")
+def test_pcode_without_fignumber_emits_warning(app, warning):
+    """A pcode block with no figure number must emit a Sphinx warning.
+
+    Without numfig = True (or for a document outside every toctree) Sphinx
+    assigns no figure number, the <pre> gets an empty id, and the
+    autorenderer silently skips the block.  A warning must explain why the
+    block will not render and how to fix it.
+    """
+    app.build()
+    assert 'numfig' in warning.getvalue(), (
+        'Expected a warning telling the user to set numfig = True'
+    )
+    assert "suppress_warnings = ['pseudocode.nonumber']" in warning.getvalue(), (
+        'Expected the warning to spell out how to silence it'
+    )
