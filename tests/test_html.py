@@ -257,6 +257,22 @@ def test_ref_autorenderer_contains_replacement_data(autorenderer_js_ref):
 
 
 @pytest.mark.sphinx('html', testroot="ref")
+def test_ref_bare_form_uses_section_title(autorenderer_js_ref):
+    """A bare :ref:`label` must render the section title, not the label.
+
+    Sphinx's std domain stores the section title alongside each label; a
+    :ref: without an explicit <target> uses that title as the link text.
+    :ref: inside pcode blocks must behave the same way.
+    """
+    assert '"text": "Extending to Multiple Strings"' in autorenderer_js_ref, (
+        'Bare :ref: link text must be the section title'
+    )
+    assert '"text": "sec-multiple-strings"' not in autorenderer_js_ref, (
+        'Bare :ref: link text must not be the raw label'
+    )
+
+
+@pytest.mark.sphinx('html', testroot="ref")
 def test_ref_autorenderer_captures_container_before_render(autorenderer_js_ref):
     """Within the ref-bearing IIFE, pcsContainer must be saved before renderElement().
 

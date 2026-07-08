@@ -250,10 +250,13 @@ def _resolve_refs_in_code(code, docname, app):
 
     def replace_ref(m):
         display = m.group(1).strip()
-        target = (m.group(2) or display).strip().lower()
+        has_explicit_title = m.group(2) is not None
+        target = (m.group(2) if has_explicit_title else display).strip().lower()
         href = '#'
         if target in std_labels:
-            target_docname, labelid, _ = std_labels[target]
+            target_docname, labelid, sectname = std_labels[target]
+            if not has_explicit_title and sectname:
+                display = sectname
             try:
                 href = app.builder.get_relative_uri(docname, target_docname)
                 if labelid:

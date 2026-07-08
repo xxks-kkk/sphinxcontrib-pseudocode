@@ -29,3 +29,17 @@ Test :ref: inside pcode
    \STATE see :ref:`Nonexistent Algorithm <no-such-label>`
    \end{algorithmic}
    \end{algorithm}
+
+.. _sec-multiple-strings:
+
+Extending to Multiple Strings
+-----------------------------
+
+.. pcode::
+
+   \begin{algorithm}
+   \caption{Algorithm with bare section ref}
+   \begin{algorithmic}
+   \STATE as described in :ref:`sec-multiple-strings`
+   \end{algorithmic}
+   \end{algorithm}
